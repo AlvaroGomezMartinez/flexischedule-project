@@ -103,26 +103,12 @@
   - Display success message with count of skippers identified
   - _Requirements: 3.4, 4.3, 5.5_
 
-- [ ] 10. Implement Comment Sync Service Module
-  - Write `buildCommentMap(mailOutSheet, idColumn)` function to create student ID → comment map
-  - Write `updateFlexComments(flexSheet, commentMap)` function to update column N in Flex Absences sheet
+- [x] 10. Complete Comment Sync Service Module
+  - Complete the `updateFlexComments(flexSheet, commentMap)` function (currently incomplete - missing closing braces and logic)
   - Write `syncComments()` function to orchestrate comment sync from Mail Out to Flex Absences
-  - Preserve existing comments for students not in Mail Out sheet
-  - Log warnings for unmatched students but continue processing
+  - Display success message with count of comments synced
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 11. Implement error handling and logging
-  - Add try-catch blocks to all main workflow functions
-  - Implement error logging to Apps Script execution log
-  - Add error notes to cell A1 for import failures
-  - Display user-friendly error messages for all error types
-  - Implement graceful degradation (continue processing other reports if one fails)
-  - _Requirements: 1.4, 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [ ] 12. Wire up menu items to functions
-  - Connect "Create today's flex absences sheet" menu item to `createTodaysFlexAbsencesSheet()`
-  - Connect "Import COGNOS Reports from GMail" menu item to `importCognosReports()`
-  - Connect "Add data to Flex Absences sheet" menu item to `enrichFlexAbsences()`
-  - Connect "Sync Comments from Mail Out sheet" menu item to `syncComments()`
-  - Test all menu items trigger correct functions
-  - _Requirements: 4.1, 4.2, 6.1, 7.1_
+
+

@@ -1241,6 +1241,201 @@ function enrichFlexAbsences() {
   }
 }
 
+// ============================================================================
+// COMMENT SYNC SERVICE MODULE
+// ============================================================================
+
+/**
+ * Builds a map of student ID to comment from the Mail Out sheet
+ * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} mailOutSheet - The Mail Out sheet
+ * @param {number} idColumn - Zero-based column index containing student ID
+ * @returns {Map<string, string>} Map of student ID to comment text
+ */
+function buildCommentMap(mailOutSheet, idColumn) {
+  try {
+    const commentMap = new Map();
+    
+    // Get all data from the sheet
+    const lastRow = mailOutSheet.getLastRow();
+    const lastColumn = mailOutSheet.getLastColumn();
+    
+    if (lastRow <= 1) {
+      Logger.log(`Mail Out sheet has no data rows (only headers or empty)`);
+      return commentMap;
+    }
+    
+    if (lastColumn === 0) {
+      Logger.log(`Mail Out sheet has no columns`);
+      return commentMap;
+    }
+    
+    // Get data starting from row 2 (skip headers in row 1)
+    // We need columns A (student ID) and N (comments, column 14)
+    const dataRange = mailOutSheet.getRange(2, 1, lastRow - 1, Math.max(lastColumn, 14));
+    const data = dataRange.getValues();
+    
+    // Build the map - column N is index 13 (zero-based)
+    const commentColumnIndex = 13;
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const studentId = String(row[idColumn]).trim();
+      
+      // Skip rows with empty student ID
+      if (!studentId || studentId === '') {
+        continue;
+      }
+      
+      // Get comment from column N (index 13)
+      const comment = commentColumnIndex < row.length ? String(row[commentColumnIndex]) : '';
+      
+      // Only add to map if there's a comment (skip empty comments)
+      if (comment && comment.trim() !== '') {
+        commentMap.set(studentId, comment);
+      }
+    }
+    
+    Logger.log(`Built comment map from Mail Out sheet: ${commentMap.size} students with comments`);
+    return commentMap;
+    
+  } catch (error) {
+    Logger.log(`Error building comment map from Mail Out sheet: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Updates comments in column N of the Flex Absences sheet from the comment map
+ * Preserves existing comments for students not in the map
+ * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet
+ * @param {Map<string, string>} commentMap - Map of student ID to comment text
+ */
+function updateFlexComments(flexSheet, commentMap) {
+  try {
+    const lastRow = flexSheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      Logger.log('No data rows in flex absences sheet to update comments');
+      return;
+    }
+    
+    // Get student IDs from column A (starting from row 2, skipping headers)
+    const studentIdRange = flexSheet.getRange(2, 1, lastRow - 1, 1);
+    const studentIds = studentIdRange.getValues();
+    
+    // Get existing comments from column N (column 14)
+    const existingCommentsRange = flexSheet.getRange(2, 14, lastRow - 1, 1);
+    const existingComments = existingCommentsRange.getValues();
+    
+    // Prepare updated comments to write to column N
+    const updatedComments = [];
+    let updatedCount = 0;
+    let unmatchedCount = 0;
+    
+    for (let i = 0; i < studentIds.length; i++) {
+      const studentId = String(studentIds[i][0]).trim();
+      
+      if (!studentId || studentId === '') {
+        // Empty row, preserve existing comment
+        updatedComments.push([existingComments[i][0]]);
+        continue;
+      }
+      
+      // Check if student has a comment in the comment map
+      if (commentMap.has(studentId)) {
+        const newComment = commentMap.get(studentId);
+        updatedComments.push([newComment]);
+        updatedCount++;
+      } else {
+        // Student not in Mail Out sheet, preserve existing comment
+        updatedComments.push([existingComments[i][0]]);
+        unmatchedCount++;
+      }
+    }
+    
+    // Write updated comments to column N (column 14)
+    const targetRange = flexSheet.getRange(2, 14, updatedComments.length, 1);
+    targetRange.setValues(updatedComments);
+    
+    Logger.log(`Updated comments in flex absences sheet: ${updatedCount} comments synced, ${unmatchedCount} students not in Mail Out`);
+    return updatedCount;
+    
+  } catch (error) {
+    Logger.log(`Error updating flex comments: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Main orchestration function for syncing comments from Mail Out sheet to Flex Absences sheet
+ * Copies comments from column N of Mail Out to column N of Flex Absences
+ * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
+ */
 function syncComments() {
-  showErrorMessage('Comment sync functionality not yet implemented.');
+  try {
+    Logger.log('Starting comment sync from Mail Out to Flex Absences...');
+    
+    // Get the flex absences sheet
+    const flexSheet = getFlexAbsencesSheet();
+    
+    if (!flexSheet) {
+      showErrorMessage('Could not find flex absences sheet. Please create a sheet with a name like "11.3 flex absences".');
+      return;
+    }
+    
+    Logger.log(`Found flex absences sheet: ${flexSheet.getName()}`);
+    
+    // Check if there's data in flex absences sheet
+    const flexLastRow = flexSheet.getLastRow();
+    if (flexLastRow <= 1) {
+      showErrorMessage('No data found in flex absences sheet.');
+      return;
+    }
+    
+    // Get the Mail Out sheet
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const mailOutSheet = spreadsheet.getSheetByName(CONFIG.sheetNames.mailOut);
+    
+    if (!mailOutSheet) {
+      showErrorMessage('Mail Out sheet not found. Please run enrichment first.');
+      return;
+    }
+    
+    // Check if there's data in Mail Out sheet
+    const mailOutLastRow = mailOutSheet.getLastRow();
+    if (mailOutLastRow <= 1) {
+      showErrorMessage('No data found in Mail Out sheet. Please run enrichment first.');
+      return;
+    }
+    
+    Logger.log('Building comment map from Mail Out sheet...');
+    
+    // Build comment map from Mail Out sheet
+    // Student ID is in column A (index 0)
+    const idColumn = 0;
+    const commentMap = buildCommentMap(mailOutSheet, idColumn);
+    
+    if (commentMap.size === 0) {
+      showSuccessMessage('No comments found in Mail Out sheet to sync.');
+      return;
+    }
+    
+    Logger.log(`Found ${commentMap.size} comments in Mail Out sheet`);
+    
+    // Update comments in Flex Absences sheet
+    Logger.log('Updating comments in Flex Absences sheet...');
+    const updatedCount = updateFlexComments(flexSheet, commentMap);
+    
+    // Display success message
+    const message = `Comment sync complete!\n\nSynced ${updatedCount} comment(s) from Mail Out to Flex Absences sheet.`;
+    showSuccessMessage(message);
+    
+    Logger.log(`Comment sync complete. ${updatedCount} comments synced.`);
+    
+  } catch (error) {
+    Logger.log(`Error in syncComments: ${error.message}`);
+    showErrorMessage(`Failed to sync comments: ${error.message}`);
+  }
 }
