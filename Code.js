@@ -78,3 +78,39 @@ const CONFIG = {
     Q: 'Guardian 2 Email'
   }
 };
+
+// ============================================================================
+// UI MODULE
+// ============================================================================
+
+/**
+ * Creates custom menu when spreadsheet opens
+ * This function is automatically triggered by Google Sheets
+ */
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  
+  ui.createMenu('Flex Absence Tracker')
+    .addItem('Create today\'s flex absences sheet', 'createTodaysFlexAbsencesSheet')
+    .addItem('Import COGNOS Reports from GMail', 'importCognosReports')
+    .addItem('Add data to Flex Absences sheet', 'enrichFlexAbsences')
+    .addItem('Sync Comments from Mail Out sheet', 'syncComments')
+    .addToUi();
+}
+
+/**
+ * Displays a success message as a toast notification
+ * @param {string} message - The success message to display
+ */
+function showSuccessMessage(message) {
+  SpreadsheetApp.getActiveSpreadsheet().toast(message, 'Success', 5);
+}
+
+/**
+ * Displays an error message as an alert dialog
+ * @param {string} message - The error message to display
+ */
+function showErrorMessage(message) {
+  const ui = SpreadsheetApp.getUi();
+  ui.alert('Error', message, ui.ButtonSet.OK);
+}
