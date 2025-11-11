@@ -114,3 +114,76 @@ function showErrorMessage(message) {
   const ui = SpreadsheetApp.getUi();
   ui.alert('Error', message, ui.ButtonSet.OK);
 }
+
+// ============================================================================
+// SHEET CREATION MODULE
+// ============================================================================
+
+/**
+ * Formats a date as "M.D" for sheet naming (e.g., "11.3" for November 3rd)
+ * @param {Date} date - The date to format
+ * @returns {string} Formatted date string in "M.D" format
+ */
+function formatDateForSheetName(date) {
+  const month = date.getMonth() + 1;  // getMonth() returns 0-11
+  const day = date.getDate();
+  return `${month}.${day}`;
+}
+
+/**
+ * Creates a new flex absences sheet with today's date
+ * Checks for duplicate sheet names and sets up column headers
+ * Requirements: 7.2, 7.3, 7.4
+ */
+function createTodaysFlexAbsencesSheet() {
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const today = new Date();
+    const dateStr = formatDateForSheetName(today);
+    const sheetName = `${dateStr} flex absences`;
+    
+    // Check if sheet already exists
+    const existingSheet = spreadsheet.getSheetByName(sheetName);
+    if (existingSheet) {
+      showSuccessMessage(`Sheet "${sheetName}" already exists.`);
+      return;
+    }
+    
+    // Create new sheet
+    const newSheet = spreadsheet.insertSheet(sheetName);
+    
+    // Set up headers
+    setupFlexAbsencesHeaders(newSheet);
+    
+    showSuccessMessage(`Created new sheet: "${sheetName}"`);
+    
+  } catch (error) {
+    Logger.log(`Error creating flex absences sheet: ${error.message}`);
+    showErrorMessage(`Failed to create flex absences sheet: ${error.message}`);
+  }
+}
+
+/**
+ * Sets up column headers for a flex absences sheet
+ * Sets headers for columns A-Q (A-K for FlexiSched data, L-Q for enriched data)
+ * Requirements: 7.5, 7.6
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to set up headers for
+ */
+function setupFlexAbsencesHeaders(sheet) {
+  // Set FlexiSched data headers (columns A-K)
+  const flexiSchedHeaders = ['ID', 'First Name', 'Last Name', 'Grade', 'Flex Name', 
+                              'Type', 'Request', 'Day', 'Period', 'Date', 'Flex Status'];
+  sheet.getRange('A1:K1').setValues([flexiSchedHeaders]);
+  
+  // Set enriched data headers (columns L-Q)
+  const headers = CONFIG.flexAbsencesHeaders;
+  sheet.getRange('L1').setValue(headers.L);  // Attendance Code
+  sheet.getRange('M1').setValue(headers.M);  // 2nd Period Teacher
+  sheet.getRange('N1').setValue(headers.N);  // Comments
+  sheet.getRange('O1').setValue(headers.O);  // Student Email
+  sheet.getRange('P1').setValue(headers.P);  // Guardian 1 Email
+  sheet.getRange('Q1').setValue(headers.Q);  // Guardian 2 Email
+  
+  // Format entire header row (bold)
+  sheet.getRange('A1:Q1').setFontWeight('bold');
+}

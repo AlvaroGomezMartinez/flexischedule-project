@@ -19,14 +19,14 @@
   - Write `showErrorMessage(message)` function to display error alerts
   - _Requirements: 4.1, 4.2, 7.1_
 
-- [ ] 4. Implement Sheet Creation Module
-- [ ] 4.1 Create date formatting and sheet creation functions
+- [x] 4. Implement Sheet Creation Module
+- [x] 4.1 Create date formatting and sheet creation functions
   - Write `formatDateForSheetName(date)` function to format date as "M.D" (e.g., "11.3")
   - Write `createTodaysFlexAbsencesSheet()` function to create new sheet with today's date
   - Implement duplicate sheet name checking
   - _Requirements: 7.2, 7.3, 7.4_
 
-- [ ] 4.2 Set up flex absences sheet headers
+- [x] 4.2 Set up flex absences sheet headers
   - Write `setupFlexAbsencesHeaders(sheet)` function to set column headers A-Q
   - Set headers: L="Attendance Code", M="2nd Period Teacher", N="Comments", O="Student Email", P="Guardian 1 Email", Q="Guardian 2 Email"
   - _Requirements: 7.5, 7.6_
