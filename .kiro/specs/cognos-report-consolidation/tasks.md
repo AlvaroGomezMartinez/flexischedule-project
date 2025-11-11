@@ -57,13 +57,13 @@
   - Implement error handling for missing emails and attachments
   - _Requirements: 1.2, 1.3, 1.4_
 
-- [ ] 7. Implement Excel Converter Module
-- [ ] 7.1 Create Excel parsing functions
+- [x] 7. Implement Excel Converter Module
+- [x] 7.1 Create Excel parsing functions
   - Write `convertExcelToArray(blob)` function to convert Excel blob to 2D array
   - Write `parseExcelData(excelBlob)` function to extract data and headers from Excel files
   - _Requirements: 2.4_
 
-- [ ] 7.2 Create data transformation functions
+- [x] 7.2 Create data transformation functions
   - Write `filterByPeriod(data, periodColumn, periodValue)` function to filter rows where column J = "02"
   - Write `reorderColumns(data, columnMapping)` function to reorder columns and exclude "9th Grd Entry" for courses report
   - _Requirements: 2.1, 2.2_

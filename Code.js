@@ -468,3 +468,189 @@ function identifyReportType(email) {
   Logger.log(`Could not identify report type for subject: ${subject}`);
   return null;
 }
+
+// ============================================================================
+// EXCEL CONVERTER MODULE
+// ============================================================================
+
+/**
+ * Converts an Excel blob to a 2D array
+ * Requirements: 2.4
+ * @param {GoogleAppsScript.Base.Blob} blob - The Excel file blob
+ * @returns {Array<Array>} 2D array of cell values
+ */
+function convertExcelToArray(blob) {
+  try {
+    // Convert Excel blob to temporary spreadsheet
+    const tempFile = Drive.Files.insert({
+      title: 'temp_excel_' + new Date().getTime(),
+      mimeType: MimeType.GOOGLE_SHEETS
+    }, blob, {
+      convert: true
+    });
+    
+    // Open the converted spreadsheet
+    const tempSpreadsheet = SpreadsheetApp.openById(tempFile.id);
+    const tempSheet = tempSpreadsheet.getSheets()[0];
+    
+    // Get all data from the sheet
+    const lastRow = tempSheet.getLastRow();
+    const lastColumn = tempSheet.getLastColumn();
+    
+    let data = [];
+    if (lastRow > 0 && lastColumn > 0) {
+      const range = tempSheet.getRange(1, 1, lastRow, lastColumn);
+      data = range.getValues();
+    }
+    
+    // Clean up: delete the temporary file
+    Drive.Files.remove(tempFile.id);
+    
+    Logger.log(`Converted Excel blob to array with ${data.length} rows`);
+    return data;
+    
+  } catch (error) {
+    Logger.log(`Error converting Excel to array: ${error.message}`);
+    throw new Error(`Failed to convert Excel file: ${error.message}`);
+  }
+}
+
+/**
+ * Parses Excel data and extracts headers and data rows
+ * Requirements: 2.4
+ * @param {GoogleAppsScript.Base.Blob} excelBlob - The Excel file blob
+ * @returns {Object} Object with 'headers' array and 'rows' 2D array
+ */
+function parseExcelData(excelBlob) {
+  try {
+    const allData = convertExcelToArray(excelBlob);
+    
+    if (!allData || allData.length === 0) {
+      Logger.log('No data found in Excel file');
+      return {
+        headers: [],
+        rows: []
+      };
+    }
+    
+    // First row is headers
+    const headers = allData[0];
+    
+    // Remaining rows are data
+    const rows = allData.slice(1);
+    
+    Logger.log(`Parsed Excel data: ${headers.length} columns, ${rows.length} data rows`);
+    
+    return {
+      headers: headers,
+      rows: rows
+    };
+    
+  } catch (error) {
+    Logger.log(`Error parsing Excel data: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Filters data rows by a specific column value
+ * Used to filter attendance data to only 2nd period (column J = "02")
+ * Requirements: 2.1, 2.2
+ * @param {Array<Array>} data - 2D array with headers in first row and data in subsequent rows
+ * @param {number} periodColumn - Zero-based column index to filter on (e.g., 9 for column J)
+ * @param {string} periodValue - The value to filter for (e.g., "02")
+ * @returns {Array<Array>} Filtered 2D array with headers and matching rows
+ */
+function filterByPeriod(data, periodColumn, periodValue) {
+  try {
+    if (!data || data.length === 0) {
+      Logger.log('No data to filter');
+      return [];
+    }
+    
+    // First row is headers
+    const headers = data[0];
+    const dataRows = data.slice(1);
+    
+    // Filter rows where the specified column matches the period value
+    const filteredRows = dataRows.filter(row => {
+      // Convert to string for comparison (handles both string and number types)
+      const cellValue = row[periodColumn] ? String(row[periodColumn]).trim() : '';
+      return cellValue === periodValue;
+    });
+    
+    Logger.log(`Filtered ${dataRows.length} rows to ${filteredRows.length} rows where column ${periodColumn} = "${periodValue}"`);
+    
+    // Return headers plus filtered rows
+    return [headers].concat(filteredRows);
+    
+  } catch (error) {
+    Logger.log(`Error filtering by period: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Reorders columns in data array based on column mapping
+ * Used to reorder and exclude columns for the courses report
+ * Requirements: 2.1, 2.2
+ * @param {Array<Array>} data - 2D array with headers in first row and data in subsequent rows
+ * @param {Object} columnMapping - Object with 'originalColumns' and 'targetColumns' arrays
+ * @returns {Array<Array>} Reordered 2D array with headers and data
+ */
+function reorderColumns(data, columnMapping) {
+  try {
+    if (!data || data.length === 0) {
+      Logger.log('No data to reorder');
+      return [];
+    }
+    
+    if (!columnMapping || !columnMapping.originalColumns || !columnMapping.targetColumns) {
+      Logger.log('Invalid column mapping provided');
+      throw new Error('Column mapping must include originalColumns and targetColumns arrays');
+    }
+    
+    const headers = data[0];
+    const dataRows = data.slice(1);
+    
+    // Create a map of original column names to their indices
+    const columnIndexMap = {};
+    for (let i = 0; i < headers.length; i++) {
+      const headerName = String(headers[i]).trim();
+      columnIndexMap[headerName] = i;
+    }
+    
+    // Build array of column indices in the target order
+    const targetIndices = [];
+    for (let i = 0; i < columnMapping.targetColumns.length; i++) {
+      const targetColumn = columnMapping.targetColumns[i];
+      const originalIndex = columnIndexMap[targetColumn];
+      
+      if (originalIndex === undefined) {
+        Logger.log(`Warning: Target column "${targetColumn}" not found in original data`);
+        targetIndices.push(-1);  // Mark as missing
+      } else {
+        targetIndices.push(originalIndex);
+      }
+    }
+    
+    // Reorder headers
+    const reorderedHeaders = columnMapping.targetColumns.slice();
+    
+    // Reorder data rows
+    const reorderedRows = dataRows.map(row => {
+      return targetIndices.map(index => {
+        return index >= 0 ? row[index] : '';  // Use empty string for missing columns
+      });
+    });
+    
+    Logger.log(`Reordered data from ${headers.length} columns to ${reorderedHeaders.length} columns`);
+    
+    // Return reordered headers plus reordered data rows
+    return [reorderedHeaders].concat(reorderedRows);
+    
+  } catch (error) {
+    Logger.log(`Error reordering columns: ${error.message}`);
+    throw error;
+  }
+}
