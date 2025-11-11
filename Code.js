@@ -187,3 +187,284 @@ function setupFlexAbsencesHeaders(sheet) {
   // Format entire header row (bold)
   sheet.getRange('A1:Q1').setFontWeight('bold');
 }
+
+// ============================================================================
+// SHEET MANAGER MODULE
+// ============================================================================
+
+/**
+ * Returns an existing sheet by name or creates a new one if it doesn't exist
+ * Requirements: 2.5, 3.1
+ * @param {string} sheetName - The name of the sheet to get or create
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet} The existing or newly created sheet
+ */
+function getOrCreateSheet(sheetName) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = spreadsheet.getSheetByName(sheetName);
+  
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(sheetName);
+    Logger.log(`Created new sheet: ${sheetName}`);
+  }
+  
+  return sheet;
+}
+
+/**
+ * Finds and returns the flex absences sheet matching date pattern and "flex absences" suffix
+ * Requirements: 2.5, 3.1
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet|null} The flex absences sheet or null if not found
+ */
+function getFlexAbsencesSheet() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = spreadsheet.getSheets();
+  const pattern = CONFIG.sheetNames.flexAbsencesPattern;
+  
+  for (let i = 0; i < sheets.length; i++) {
+    const sheet = sheets[i];
+    const sheetName = sheet.getName();
+    
+    if (pattern.test(sheetName)) {
+      Logger.log(`Found flex absences sheet: ${sheetName}`);
+      return sheet;
+    }
+  }
+  
+  Logger.log('No flex absences sheet found matching pattern');
+  return null;
+}
+
+/**
+ * Clears data from a sheet starting at the specified row
+ * Preserves headers (assumes row 1 contains headers)
+ * Requirements: 2.5, 3.1
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to clear data from
+ * @param {number} startRow - The row number to start clearing from (1-indexed)
+ */
+function clearSheetData(sheet, startRow) {
+  const lastRow = sheet.getLastRow();
+  
+  // If startRow is beyond the last row, nothing to clear
+  if (startRow > lastRow) {
+    Logger.log(`No data to clear in sheet ${sheet.getName()} starting from row ${startRow}`);
+    return;
+  }
+  
+  const lastColumn = sheet.getLastColumn();
+  
+  // If there are no columns, nothing to clear
+  if (lastColumn === 0) {
+    Logger.log(`No columns in sheet ${sheet.getName()}`);
+    return;
+  }
+  
+  const numRows = lastRow - startRow + 1;
+  const range = sheet.getRange(startRow, 1, numRows, lastColumn);
+  range.clearContent();
+  
+  Logger.log(`Cleared ${numRows} rows from sheet ${sheet.getName()} starting at row ${startRow}`);
+}
+
+/**
+ * Writes a 2D array of data to a sheet starting at the specified row
+ * Requirements: 2.6, 2.7
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to write data to
+ * @param {Array<Array>} data - 2D array of data to write
+ * @param {number} startRow - The row number to start writing at (1-indexed)
+ */
+function writeDataToSheet(sheet, data, startRow) {
+  if (!data || data.length === 0) {
+    Logger.log('No data to write to sheet');
+    return;
+  }
+  
+  const numRows = data.length;
+  const numCols = data[0].length;
+  
+  const range = sheet.getRange(startRow, 1, numRows, numCols);
+  range.setValues(data);
+  
+  Logger.log(`Wrote ${numRows} rows and ${numCols} columns to sheet ${sheet.getName()} starting at row ${startRow}`);
+}
+
+/**
+ * Adds a note to a specific cell in a sheet
+ * Requirements: 2.6, 2.7
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet containing the cell
+ * @param {string} cell - The cell address in A1 notation (e.g., "A1")
+ * @param {string} note - The note text to add to the cell
+ */
+function addNoteToCell(sheet, cell, note) {
+  const range = sheet.getRange(cell);
+  range.setNote(note);
+  
+  Logger.log(`Added note to cell ${cell} in sheet ${sheet.getName()}`);
+}
+
+/**
+ * Sets up column headers for a sheet
+ * Requirements: 2.6, 2.7
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to set headers for
+ * @param {Array<string>} headers - Array of header strings
+ */
+function setSheetHeaders(sheet, headers) {
+  if (!headers || headers.length === 0) {
+    Logger.log('No headers to set');
+    return;
+  }
+  
+  const range = sheet.getRange(1, 1, 1, headers.length);
+  range.setValues([headers]);
+  range.setFontWeight('bold');
+  
+  Logger.log(`Set ${headers.length} headers in sheet ${sheet.getName()}`);
+}
+
+// ============================================================================
+// GMAIL SERVICE MODULE
+// ============================================================================
+
+/**
+ * Gets the active user's email address
+ * Requirements: 1.1, 8.1, 8.2, 8.3
+ * @returns {string} The user's email address
+ */
+function getUserEmail() {
+  const userEmail = Session.getActiveUser().getEmail();
+  Logger.log(`Detected user email: ${userEmail}`);
+  return userEmail;
+}
+
+/**
+ * Searches Gmail for COGNOS report emails from the user's own email address
+ * Returns the most recent email for each of the three report types
+ * Requirements: 1.1, 8.1, 8.2, 8.3
+ * @returns {Object} Object with keys 'attendance', 'courses', 'contacts' containing email data or null
+ */
+function searchCognosEmails() {
+  try {
+    const userEmail = getUserEmail();
+    const results = {
+      attendance: null,
+      courses: null,
+      contacts: null
+    };
+    
+    // Search for each report type
+    for (const reportType in EMAIL_CONFIG) {
+      const config = EMAIL_CONFIG[reportType];
+      const subject = config.subject;
+      
+      // Build search query: from user's email AND subject matches
+      const searchQuery = `from:${userEmail} subject:"${subject}"`;
+      Logger.log(`Searching Gmail with query: ${searchQuery}`);
+      
+      // Search Gmail and get the most recent thread
+      const threads = GmailApp.search(searchQuery, 0, 1);
+      
+      if (threads.length > 0) {
+        const messages = threads[0].getMessages();
+        
+        if (messages.length > 0) {
+          // Get the most recent message in the thread
+          const message = messages[messages.length - 1];
+          
+          results[reportType] = {
+            messageId: message.getId(),
+            subject: message.getSubject(),
+            from: message.getFrom(),
+            date: message.getDate(),
+            reportType: reportType
+          };
+          
+          Logger.log(`Found ${reportType} report: ${message.getSubject()} from ${message.getDate()}`);
+        }
+      } else {
+        Logger.log(`No emails found for ${reportType} report with subject: ${subject}`);
+      }
+    }
+    
+    return results;
+    
+  } catch (error) {
+    Logger.log(`Error searching COGNOS emails: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Retrieves Excel attachments from a Gmail message
+ * Requirements: 1.2, 1.3, 1.4
+ * @param {string} messageId - The Gmail message ID
+ * @returns {Array<Object>} Array of attachment objects with blob, filename, and mimeType
+ */
+function getAttachments(messageId) {
+  try {
+    const message = GmailApp.getMessageById(messageId);
+    
+    if (!message) {
+      throw new Error(`Message not found with ID: ${messageId}`);
+    }
+    
+    const attachments = message.getAttachments();
+    const excelAttachments = [];
+    
+    // Filter for Excel files (.xlsx format)
+    for (let i = 0; i < attachments.length; i++) {
+      const attachment = attachments[i];
+      const mimeType = attachment.getContentType();
+      const filename = attachment.getName();
+      
+      // Check for Excel 2007+ format (.xlsx)
+      if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+          filename.toLowerCase().endsWith('.xlsx')) {
+        
+        excelAttachments.push({
+          blob: attachment,
+          filename: filename,
+          mimeType: mimeType
+        });
+        
+        Logger.log(`Found Excel attachment: ${filename}`);
+      }
+    }
+    
+    if (excelAttachments.length === 0) {
+      throw new Error(`No Excel attachments found in message ${messageId}`);
+    }
+    
+    return excelAttachments;
+    
+  } catch (error) {
+    Logger.log(`Error retrieving attachments from message ${messageId}: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Identifies which COGNOS report type an email contains based on subject
+ * Requirements: 1.2, 1.3, 1.4
+ * @param {Object} email - Email object with subject property
+ * @returns {string|null} Report type ('attendance', 'courses', 'contacts') or null if not recognized
+ */
+function identifyReportType(email) {
+  if (!email || !email.subject) {
+    Logger.log('Invalid email object provided to identifyReportType');
+    return null;
+  }
+  
+  const subject = email.subject;
+  
+  // Check against each configured report type
+  for (const reportType in EMAIL_CONFIG) {
+    const config = EMAIL_CONFIG[reportType];
+    
+    if (subject.includes(config.subject)) {
+      Logger.log(`Identified report type: ${reportType} for subject: ${subject}`);
+      return reportType;
+    }
+  }
+  
+  Logger.log(`Could not identify report type for subject: ${subject}`);
+  return null;
+}

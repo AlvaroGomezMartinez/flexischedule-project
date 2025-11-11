@@ -31,27 +31,27 @@
   - Set headers: L="Attendance Code", M="2nd Period Teacher", N="Comments", O="Student Email", P="Guardian 1 Email", Q="Guardian 2 Email"
   - _Requirements: 7.5, 7.6_
 
-- [ ] 5. Implement Sheet Manager Module
-- [ ] 5.1 Create basic sheet management functions
+- [x] 5. Implement Sheet Manager Module
+- [x] 5.1 Create basic sheet management functions
   - Write `getOrCreateSheet(sheetName)` function to return existing sheet or create new one
   - Write `getFlexAbsencesSheet()` function to find sheet matching date pattern and "flex absences" suffix
   - Write `clearSheetData(sheet, startRow)` function to clear data from specified row onward
   - _Requirements: 2.5, 3.1_
 
-- [ ] 5.2 Create sheet data manipulation functions
+- [x] 5.2 Create sheet data manipulation functions
   - Write `writeDataToSheet(sheet, data, startRow)` function to write 2D array to sheet
   - Write `addNoteToCell(sheet, cell, note)` function to add notes to cells
   - Write `setSheetHeaders(sheet, headers)` function to set up column headers
   - _Requirements: 2.6, 2.7_
 
-- [ ] 6. Implement Gmail Service Module
-- [ ] 6.1 Create user email detection and Gmail search functions
+- [x] 6. Implement Gmail Service Module
+- [x] 6.1 Create user email detection and Gmail search functions
   - Write `getUserEmail()` function using `Session.getActiveUser().getEmail()`
   - Write `searchCognosEmails()` function to search Gmail with `from:` filter for user's own email
   - Implement search queries for all three COGNOS report subjects
   - _Requirements: 1.1, 8.1, 8.2, 8.3_
 
-- [ ] 6.2 Create email attachment retrieval functions
+- [x] 6.2 Create email attachment retrieval functions
   - Write `getAttachments(messageId)` function to retrieve Excel attachments from emails
   - Write `identifyReportType(email)` function to determine which of the three reports an email contains
   - Implement error handling for missing emails and attachments
