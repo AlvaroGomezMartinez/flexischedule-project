@@ -1,0 +1,14 @@
+# Ignore everything by default
+**/**
+
+# Include only GAS project files
+!appsscript.json
+!**/*.gs
+!**/*.js
+!**/*.html
+
+# Exclude common development files
+.git/**
+node_modules/**
+.clasp.json
+.claspignore

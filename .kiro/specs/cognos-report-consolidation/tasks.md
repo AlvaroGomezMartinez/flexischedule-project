@@ -1,0 +1,128 @@
+# Implementation Plan
+
+- [x] 1. Set up CLASP development environment
+  - Initialize CLASP project for pushing to Google Apps Script
+  - Create .claspignore file to exclude non-GAS files (spec files, README, etc.)
+  - Configure CLASP to connect to the bound Google Sheets spreadsheet
+  - _Requirements: Setup_
+
+- [x] 2. Set up project structure and configuration
+  - Create Code.gs file as the main entry point
+  - Define CONFIG constant with email patterns, sheet names, and column mappings
+  - Define EMAIL_CONFIG constant with the three COGNOS report configurations
+  - _Requirements: 1.1, 2.1, 2.2, 2.3_
+
+- [ ] 3. Implement UI Module with custom menu
+  - Write `onOpen()` function to create custom menu when spreadsheet opens
+  - Create menu structure with four items: "Create today's flex absences sheet", "Import COGNOS Reports from GMail", "Add data to Flex Absences sheet", "Sync Comments from Mail Out sheet"
+  - Write `showSuccessMessage(message)` function to display toast notifications
+  - Write `showErrorMessage(message)` function to display error alerts
+  - _Requirements: 4.1, 4.2, 7.1_
+
+- [ ] 4. Implement Sheet Creation Module
+- [ ] 4.1 Create date formatting and sheet creation functions
+  - Write `formatDateForSheetName(date)` function to format date as "M.D" (e.g., "11.3")
+  - Write `createTodaysFlexAbsencesSheet()` function to create new sheet with today's date
+  - Implement duplicate sheet name checking
+  - _Requirements: 7.2, 7.3, 7.4_
+
+- [ ] 4.2 Set up flex absences sheet headers
+  - Write `setupFlexAbsencesHeaders(sheet)` function to set column headers A-Q
+  - Set headers: L="Attendance Code", M="2nd Period Teacher", N="Comments", O="Student Email", P="Guardian 1 Email", Q="Guardian 2 Email"
+  - _Requirements: 7.5, 7.6_
+
+- [ ] 5. Implement Sheet Manager Module
+- [ ] 5.1 Create basic sheet management functions
+  - Write `getOrCreateSheet(sheetName)` function to return existing sheet or create new one
+  - Write `getFlexAbsencesSheet()` function to find sheet matching date pattern and "flex absences" suffix
+  - Write `clearSheetData(sheet, startRow)` function to clear data from specified row onward
+  - _Requirements: 2.5, 3.1_
+
+- [ ] 5.2 Create sheet data manipulation functions
+  - Write `writeDataToSheet(sheet, data, startRow)` function to write 2D array to sheet
+  - Write `addNoteToCell(sheet, cell, note)` function to add notes to cells
+  - Write `setSheetHeaders(sheet, headers)` function to set up column headers
+  - _Requirements: 2.6, 2.7_
+
+- [ ] 6. Implement Gmail Service Module
+- [ ] 6.1 Create user email detection and Gmail search functions
+  - Write `getUserEmail()` function using `Session.getActiveUser().getEmail()`
+  - Write `searchCognosEmails()` function to search Gmail with `from:` filter for user's own email
+  - Implement search queries for all three COGNOS report subjects
+  - _Requirements: 1.1, 8.1, 8.2, 8.3_
+
+- [ ] 6.2 Create email attachment retrieval functions
+  - Write `getAttachments(messageId)` function to retrieve Excel attachments from emails
+  - Write `identifyReportType(email)` function to determine which of the three reports an email contains
+  - Implement error handling for missing emails and attachments
+  - _Requirements: 1.2, 1.3, 1.4_
+
+- [ ] 7. Implement Excel Converter Module
+- [ ] 7.1 Create Excel parsing functions
+  - Write `convertExcelToArray(blob)` function to convert Excel blob to 2D array
+  - Write `parseExcelData(excelBlob)` function to extract data and headers from Excel files
+  - _Requirements: 2.4_
+
+- [ ] 7.2 Create data transformation functions
+  - Write `filterByPeriod(data, periodColumn, periodValue)` function to filter rows where column J = "02"
+  - Write `reorderColumns(data, columnMapping)` function to reorder columns and exclude "9th Grd Entry" for courses report
+  - _Requirements: 2.1, 2.2_
+
+- [ ] 8. Implement COGNOS report import orchestration
+  - Create main `importCognosReports()` function that orchestrates the import workflow
+  - Search Gmail for three COGNOS reports using user's email
+  - Extract Excel attachments from each email
+  - Apply special processing (filtering, reordering) based on report type
+  - Import data to respective sheets: BHS attendance, 2nd period default, contact info
+  - Add timestamp notes to cell A1 of each imported sheet
+  - Display success message with count of reports imported
+  - _Requirements: 1.5, 1.6, 2.1, 2.2, 2.3, 2.5, 2.6, 2.7_
+
+- [ ] 9. Implement Enrichment Service Module
+- [ ] 9.1 Create student lookup map building functions
+  - Write `getStudentIdColumn(sheet)` function to identify which column contains student ID
+  - Write `buildStudentMap(sheet, idColumn, dataColumns)` function to create student ID → data lookup map
+  - Build maps from BHS attendance (attendance codes), 2nd period default (teacher names), and contact info (emails)
+  - _Requirements: 4.3, 4.5, 4.6_
+
+- [ ] 9.2 Create data enrichment functions
+  - Write `addAttendanceCodes(flexSheet, attendanceMap)` function to add attendance codes or #N/A to column L
+  - Write `addTeacherNames(flexSheet, teacherMap)` function to add teacher names to column M
+  - Write `addContactInfo(flexSheet, contactMap)` function to add emails to columns O-Q
+  - _Requirements: 4.3, 4.4, 4.5, 4.6_
+
+- [ ] 9.3 Create skipper identification functions
+  - Write `identifySkippers(flexSheet)` function to find rows with #N/A in column L
+  - Write `copySkippersToMailOut(flexSheet, skipperRows)` function to copy skipper data to Mail Out sheet
+  - Clear existing Mail Out sheet data before adding new skippers
+  - _Requirements: 5.1, 5.2, 5.3, 5.4_
+
+- [ ] 9.4 Create main enrichment orchestration function
+  - Write `enrichFlexAbsences()` function to orchestrate the entire enrichment workflow
+  - Preserve FlexiSched data in columns A-K during enrichment
+  - Display success message with count of skippers identified
+  - _Requirements: 3.4, 4.3, 5.5_
+
+- [ ] 10. Implement Comment Sync Service Module
+  - Write `buildCommentMap(mailOutSheet, idColumn)` function to create student ID → comment map
+  - Write `updateFlexComments(flexSheet, commentMap)` function to update column N in Flex Absences sheet
+  - Write `syncComments()` function to orchestrate comment sync from Mail Out to Flex Absences
+  - Preserve existing comments for students not in Mail Out sheet
+  - Log warnings for unmatched students but continue processing
+  - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+
+- [ ] 11. Implement error handling and logging
+  - Add try-catch blocks to all main workflow functions
+  - Implement error logging to Apps Script execution log
+  - Add error notes to cell A1 for import failures
+  - Display user-friendly error messages for all error types
+  - Implement graceful degradation (continue processing other reports if one fails)
+  - _Requirements: 1.4, 9.1, 9.2, 9.3, 9.4, 9.5_
+
+- [ ] 12. Wire up menu items to functions
+  - Connect "Create today's flex absences sheet" menu item to `createTodaysFlexAbsencesSheet()`
+  - Connect "Import COGNOS Reports from GMail" menu item to `importCognosReports()`
+  - Connect "Add data to Flex Absences sheet" menu item to `enrichFlexAbsences()`
+  - Connect "Sync Comments from Mail Out sheet" menu item to `syncComments()`
+  - Test all menu items trigger correct functions
+  - _Requirements: 4.1, 4.2, 6.1, 7.1_
