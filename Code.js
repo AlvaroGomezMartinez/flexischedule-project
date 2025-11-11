@@ -654,3 +654,166 @@ function reorderColumns(data, columnMapping) {
     throw error;
   }
 }
+
+// ============================================================================
+// COGNOS REPORT IMPORT ORCHESTRATION
+// ============================================================================
+
+/**
+ * Main orchestration function for importing COGNOS reports from Gmail
+ * Searches for three COGNOS reports, extracts Excel attachments, applies special processing,
+ * and imports data to respective sheets with timestamp notes
+ * Requirements: 1.5, 1.6, 2.1, 2.2, 2.3, 2.5, 2.6, 2.7
+ */
+function importCognosReports() {
+  try {
+    Logger.log('Starting COGNOS report import...');
+    
+    // Search Gmail for the three COGNOS reports
+    const emailResults = searchCognosEmails();
+    
+    // Track which reports were found and imported
+    const importResults = {
+      attendance: { found: false, imported: false, error: null },
+      courses: { found: false, imported: false, error: null },
+      contacts: { found: false, imported: false, error: null }
+    };
+    
+    // Process each report type
+    for (const reportType in EMAIL_CONFIG) {
+      const config = EMAIL_CONFIG[reportType];
+      const email = emailResults[reportType];
+      
+      if (!email) {
+        // Report not found
+        const errorMsg = `Report not found: ${config.subject}`;
+        Logger.log(errorMsg);
+        importResults[reportType].error = errorMsg;
+        
+        // Add error note to sheet A1
+        const sheet = getOrCreateSheet(config.sheetName);
+        const timestamp = new Date().toLocaleString();
+        addNoteToCell(sheet, 'A1', `${timestamp}: ${errorMsg}`);
+        
+        continue;
+      }
+      
+      importResults[reportType].found = true;
+      
+      try {
+        // Extract Excel attachment from email
+        Logger.log(`Processing ${reportType} report from email: ${email.subject}`);
+        const attachments = getAttachments(email.messageId);
+        
+        if (attachments.length === 0) {
+          throw new Error('No Excel attachments found in email');
+        }
+        
+        // Use the first Excel attachment
+        const attachment = attachments[0];
+        Logger.log(`Processing attachment: ${attachment.filename}`);
+        
+        // Parse Excel data
+        const parsedData = parseExcelData(attachment.blob);
+        let processedData = [parsedData.headers].concat(parsedData.rows);
+        
+        // Apply special processing based on report type
+        if (reportType === 'attendance') {
+          // Filter to only 2nd period rows (column J = "02")
+          // Column J is index 9 (zero-based)
+          Logger.log('Applying 2nd period filter to attendance data...');
+          processedData = filterByPeriod(processedData, 9, config.periodFilter);
+          
+        } else if (reportType === 'courses') {
+          // Reorder columns and exclude "9th Grd Entry"
+          Logger.log('Reordering columns for courses data...');
+          processedData = reorderColumns(processedData, {
+            originalColumns: config.originalColumns,
+            targetColumns: config.targetColumns
+          });
+        }
+        // contacts report needs no special processing
+        
+        // Get or create the target sheet
+        const sheet = getOrCreateSheet(config.sheetName);
+        
+        // Clear existing data (preserve headers by clearing from row 2 onward)
+        clearSheetData(sheet, 2);
+        
+        // Write data to sheet (starting from row 1 to include headers)
+        writeDataToSheet(sheet, processedData, 1);
+        
+        // Add timestamp note to cell A1
+        const timestamp = new Date().toLocaleString();
+        const successNote = `Successfully imported on ${timestamp} from email dated ${email.date.toLocaleString()}`;
+        addNoteToCell(sheet, 'A1', successNote);
+        
+        importResults[reportType].imported = true;
+        Logger.log(`Successfully imported ${reportType} report to ${config.sheetName}`);
+        
+      } catch (error) {
+        // Error processing this specific report
+        const errorMsg = `Error importing ${reportType} report: ${error.message}`;
+        Logger.log(errorMsg);
+        importResults[reportType].error = errorMsg;
+        
+        // Add error note to sheet A1
+        const sheet = getOrCreateSheet(config.sheetName);
+        const timestamp = new Date().toLocaleString();
+        addNoteToCell(sheet, 'A1', `${timestamp}: ${errorMsg}`);
+      }
+    }
+    
+    // Count successfully imported reports
+    let importedCount = 0;
+    const missingReports = [];
+    const failedReports = [];
+    
+    for (const reportType in importResults) {
+      const result = importResults[reportType];
+      
+      if (result.imported) {
+        importedCount++;
+      } else if (!result.found) {
+        missingReports.push(EMAIL_CONFIG[reportType].subject);
+      } else if (result.error) {
+        failedReports.push(reportType);
+      }
+    }
+    
+    // Display results to user
+    if (importedCount === 3) {
+      showSuccessMessage(`Successfully imported all 3 COGNOS reports!`);
+    } else if (importedCount > 0) {
+      let message = `Imported ${importedCount} of 3 reports.`;
+      
+      if (missingReports.length > 0) {
+        message += `\n\nMissing reports:\n- ${missingReports.join('\n- ')}`;
+      }
+      
+      if (failedReports.length > 0) {
+        message += `\n\nFailed to import: ${failedReports.join(', ')}`;
+      }
+      
+      message += '\n\nCheck cell A1 notes in each sheet for details.';
+      showErrorMessage(message);
+    } else {
+      showErrorMessage('Failed to import any reports. Check cell A1 notes in each sheet for details.');
+    }
+    
+    Logger.log(`Import complete. Imported ${importedCount} of 3 reports.`);
+    
+  } catch (error) {
+    Logger.log(`Critical error in importCognosReports: ${error.message}`);
+    showErrorMessage(`Failed to import COGNOS reports: ${error.message}`);
+  }
+}
+
+// Placeholder functions for future implementation
+function enrichFlexAbsences() {
+  showErrorMessage('Enrichment functionality not yet implemented.');
+}
+
+function syncComments() {
+  showErrorMessage('Comment sync functionality not yet implemented.');
+}
