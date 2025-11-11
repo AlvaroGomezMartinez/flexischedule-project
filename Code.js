@@ -809,9 +809,436 @@ function importCognosReports() {
   }
 }
 
-// Placeholder functions for future implementation
+// ============================================================================
+// ENRICHMENT SERVICE MODULE
+// ============================================================================
+
+/**
+ * Identifies which column contains the student ID in a sheet
+ * Assumes student ID is in column A by default, but can be configured
+ * Requirements: 4.3, 4.5, 4.6
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to analyze
+ * @returns {number} Zero-based column index containing student ID (default: 0 for column A)
+ */
+function getStudentIdColumn(sheet) {
+  // For this implementation, student ID is always in column A (index 0)
+  // This function exists for future flexibility if column positions change
+  const studentIdColumn = 0;  // Column A
+  
+  Logger.log(`Student ID column for sheet ${sheet.getName()}: ${studentIdColumn} (Column A)`);
+  return studentIdColumn;
+}
+
+/**
+ * Builds a lookup map from a sheet mapping student ID to specified data columns
+ * Requirements: 4.3, 4.5, 4.6
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to build map from
+ * @param {number} idColumn - Zero-based column index containing student ID
+ * @param {Array<number>} dataColumns - Array of zero-based column indices to extract
+ * @returns {Map<string, Array>} Map of student ID (as string) to array of data values
+ */
+function buildStudentMap(sheet, idColumn, dataColumns) {
+  try {
+    const studentMap = new Map();
+    
+    // Get all data from the sheet
+    const lastRow = sheet.getLastRow();
+    const lastColumn = sheet.getLastColumn();
+    
+    if (lastRow <= 1) {
+      Logger.log(`Sheet ${sheet.getName()} has no data rows (only headers or empty)`);
+      return studentMap;
+    }
+    
+    if (lastColumn === 0) {
+      Logger.log(`Sheet ${sheet.getName()} has no columns`);
+      return studentMap;
+    }
+    
+    // Get data starting from row 2 (skip headers in row 1)
+    const dataRange = sheet.getRange(2, 1, lastRow - 1, lastColumn);
+    const data = dataRange.getValues();
+    
+    // Build the map
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const studentId = String(row[idColumn]).trim();
+      
+      // Skip rows with empty student ID
+      if (!studentId || studentId === '') {
+        continue;
+      }
+      
+      // Extract data from specified columns
+      const dataValues = dataColumns.map(colIndex => {
+        return colIndex < row.length ? row[colIndex] : '';
+      });
+      
+      // Store in map (if duplicate IDs exist, last one wins)
+      studentMap.set(studentId, dataValues);
+    }
+    
+    Logger.log(`Built student map from sheet ${sheet.getName()}: ${studentMap.size} students`);
+    return studentMap;
+    
+  } catch (error) {
+    Logger.log(`Error building student map from sheet ${sheet.getName()}: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Adds attendance codes from BHS attendance sheet to flex absences sheet column L
+ * If no matching student found, adds #N/A
+ * Requirements: 4.3, 4.4, 4.5, 4.6
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet
+ * @param {Map<string, Array>} attendanceMap - Map of student ID to [attendance code]
+ */
+function addAttendanceCodes(flexSheet, attendanceMap) {
+  try {
+    const lastRow = flexSheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      Logger.log('No data rows in flex absences sheet to enrich');
+      return;
+    }
+    
+    // Get student IDs from column A (starting from row 2, skipping headers)
+    const studentIdRange = flexSheet.getRange(2, 1, lastRow - 1, 1);
+    const studentIds = studentIdRange.getValues();
+    
+    // Prepare attendance codes to write to column L
+    const attendanceCodes = [];
+    
+    for (let i = 0; i < studentIds.length; i++) {
+      const studentId = String(studentIds[i][0]).trim();
+      
+      if (!studentId || studentId === '') {
+        // Empty row, leave attendance code empty
+        attendanceCodes.push(['']);
+        continue;
+      }
+      
+      // Lookup student in attendance map
+      if (attendanceMap.has(studentId)) {
+        const data = attendanceMap.get(studentId);
+        const attendanceCode = data[0] || '';  // First element is attendance code
+        attendanceCodes.push([attendanceCode]);
+      } else {
+        // Student not found in BHS attendance - mark as #N/A
+        attendanceCodes.push(['#N/A']);
+      }
+    }
+    
+    // Write attendance codes to column L (column 12)
+    const targetRange = flexSheet.getRange(2, 12, attendanceCodes.length, 1);
+    targetRange.setValues(attendanceCodes);
+    
+    Logger.log(`Added attendance codes to ${attendanceCodes.length} rows in flex absences sheet`);
+    
+  } catch (error) {
+    Logger.log(`Error adding attendance codes: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Adds teacher names from 2nd period default sheet to flex absences sheet column M
+ * Requirements: 4.3, 4.4, 4.5, 4.6
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet
+ * @param {Map<string, Array>} teacherMap - Map of student ID to [teacher name]
+ */
+function addTeacherNames(flexSheet, teacherMap) {
+  try {
+    const lastRow = flexSheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      Logger.log('No data rows in flex absences sheet to enrich');
+      return;
+    }
+    
+    // Get student IDs from column A (starting from row 2, skipping headers)
+    const studentIdRange = flexSheet.getRange(2, 1, lastRow - 1, 1);
+    const studentIds = studentIdRange.getValues();
+    
+    // Prepare teacher names to write to column M
+    const teacherNames = [];
+    
+    for (let i = 0; i < studentIds.length; i++) {
+      const studentId = String(studentIds[i][0]).trim();
+      
+      if (!studentId || studentId === '') {
+        // Empty row, leave teacher name empty
+        teacherNames.push(['']);
+        continue;
+      }
+      
+      // Lookup student in teacher map
+      if (teacherMap.has(studentId)) {
+        const data = teacherMap.get(studentId);
+        const teacherName = data[0] || '';  // First element is teacher name
+        teacherNames.push([teacherName]);
+      } else {
+        // Student not found in 2nd period default - leave empty
+        teacherNames.push(['']);
+      }
+    }
+    
+    // Write teacher names to column M (column 13)
+    const targetRange = flexSheet.getRange(2, 13, teacherNames.length, 1);
+    targetRange.setValues(teacherNames);
+    
+    Logger.log(`Added teacher names to ${teacherNames.length} rows in flex absences sheet`);
+    
+  } catch (error) {
+    Logger.log(`Error adding teacher names: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Adds contact information (emails) from contact info sheet to flex absences sheet columns O-Q
+ * Requirements: 4.3, 4.4, 4.5, 4.6
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet
+ * @param {Map<string, Array>} contactMap - Map of student ID to [student email, guardian1 email, guardian2 email]
+ */
+function addContactInfo(flexSheet, contactMap) {
+  try {
+    const lastRow = flexSheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      Logger.log('No data rows in flex absences sheet to enrich');
+      return;
+    }
+    
+    // Get student IDs from column A (starting from row 2, skipping headers)
+    const studentIdRange = flexSheet.getRange(2, 1, lastRow - 1, 1);
+    const studentIds = studentIdRange.getValues();
+    
+    // Prepare contact info to write to columns O-Q
+    const contactInfo = [];
+    
+    for (let i = 0; i < studentIds.length; i++) {
+      const studentId = String(studentIds[i][0]).trim();
+      
+      if (!studentId || studentId === '') {
+        // Empty row, leave contact info empty
+        contactInfo.push(['', '', '']);
+        continue;
+      }
+      
+      // Lookup student in contact map
+      if (contactMap.has(studentId)) {
+        const data = contactMap.get(studentId);
+        const studentEmail = data[0] || '';    // First element is student email
+        const guardian1Email = data[1] || '';  // Second element is guardian 1 email
+        const guardian2Email = data[2] || '';  // Third element is guardian 2 email
+        contactInfo.push([studentEmail, guardian1Email, guardian2Email]);
+      } else {
+        // Student not found in contact info - leave empty
+        contactInfo.push(['', '', '']);
+      }
+    }
+    
+    // Write contact info to columns O-Q (columns 15-17)
+    const targetRange = flexSheet.getRange(2, 15, contactInfo.length, 3);
+    targetRange.setValues(contactInfo);
+    
+    Logger.log(`Added contact info to ${contactInfo.length} rows in flex absences sheet`);
+    
+  } catch (error) {
+    Logger.log(`Error adding contact info: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Identifies students who skipped their flex class (have #N/A in column L)
+ * Requirements: 5.1, 5.2, 5.3, 5.4
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet
+ * @returns {Array<Object>} Array of skipper objects with rowIndex and rowData (columns A-Q)
+ */
+function identifySkippers(flexSheet) {
+  try {
+    const skippers = [];
+    const lastRow = flexSheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      Logger.log('No data rows in flex absences sheet to check for skippers');
+      return skippers;
+    }
+    
+    // Get all data from columns A-Q (columns 1-17) starting from row 2
+    const dataRange = flexSheet.getRange(2, 1, lastRow - 1, 17);
+    const data = dataRange.getValues();
+    
+    // Check each row for #N/A in column L (index 11 in the array)
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const attendanceCode = String(row[11]).trim();  // Column L is index 11
+      
+      // Check if attendance code is #N/A
+      if (attendanceCode === '#N/A') {
+        skippers.push({
+          rowIndex: i + 2,  // Actual row number in sheet (accounting for header row)
+          rowData: row      // All data from columns A-Q
+        });
+      }
+    }
+    
+    Logger.log(`Identified ${skippers.length} skippers in flex absences sheet`);
+    return skippers;
+    
+  } catch (error) {
+    Logger.log(`Error identifying skippers: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Copies skipper data to the Mail Out sheet
+ * Clears existing Mail Out sheet data before adding new skippers
+ * Requirements: 5.1, 5.2, 5.3, 5.4
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet (for header reference)
+ * @param {Array<Object>} skipperRows - Array of skipper objects with rowData
+ */
+function copySkippersToMailOut(flexSheet, skipperRows) {
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const mailOutSheet = getOrCreateSheet(CONFIG.sheetNames.mailOut);
+    
+    // Clear existing data in Mail Out sheet (from row 2 onward, preserve headers)
+    clearSheetData(mailOutSheet, 2);
+    
+    if (skipperRows.length === 0) {
+      Logger.log('No skippers to copy to Mail Out sheet');
+      return;
+    }
+    
+    // Get headers from flex absences sheet (columns A-Q)
+    const flexHeaders = flexSheet.getRange(1, 1, 1, 17).getValues()[0];
+    
+    // Set headers in Mail Out sheet if not already set
+    const mailOutHeaders = mailOutSheet.getRange(1, 1, 1, 17).getValues()[0];
+    const hasHeaders = mailOutHeaders.some(header => header !== '');
+    
+    if (!hasHeaders) {
+      mailOutSheet.getRange(1, 1, 1, 17).setValues([flexHeaders]);
+      mailOutSheet.getRange(1, 1, 1, 17).setFontWeight('bold');
+      Logger.log('Set headers in Mail Out sheet');
+    }
+    
+    // Prepare skipper data for writing (extract rowData from each skipper object)
+    const skipperData = skipperRows.map(skipper => skipper.rowData);
+    
+    // Write skipper data to Mail Out sheet starting at row 2
+    writeDataToSheet(mailOutSheet, skipperData, 2);
+    
+    Logger.log(`Copied ${skipperRows.length} skippers to Mail Out sheet`);
+    
+  } catch (error) {
+    Logger.log(`Error copying skippers to Mail Out sheet: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Main orchestration function for enriching flex absences data
+ * Adds attendance codes, teacher names, and contact info, then identifies skippers
+ * Requirements: 3.4, 4.3, 5.5
+ */
 function enrichFlexAbsences() {
-  showErrorMessage('Enrichment functionality not yet implemented.');
+  try {
+    Logger.log('Starting flex absences enrichment...');
+    
+    // Get the flex absences sheet
+    const flexSheet = getFlexAbsencesSheet();
+    
+    if (!flexSheet) {
+      showErrorMessage('Could not find flex absences sheet. Please create a sheet with a name like "11.3 flex absences".');
+      return;
+    }
+    
+    Logger.log(`Found flex absences sheet: ${flexSheet.getName()}`);
+    
+    // Check if there's data to enrich
+    const lastRow = flexSheet.getLastRow();
+    if (lastRow <= 1) {
+      showErrorMessage('No data found in flex absences sheet. Please paste FlexiSched data first.');
+      return;
+    }
+    
+    // Get the three source sheets
+    const attendanceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.sheetNames.attendance);
+    const coursesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.sheetNames.courses);
+    const contactsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.sheetNames.contacts);
+    
+    // Verify all source sheets exist
+    if (!attendanceSheet) {
+      showErrorMessage('BHS attendance sheet not found. Please import COGNOS reports first.');
+      return;
+    }
+    
+    if (!coursesSheet) {
+      showErrorMessage('2nd period default sheet not found. Please import COGNOS reports first.');
+      return;
+    }
+    
+    if (!contactsSheet) {
+      showErrorMessage('contact info sheet not found. Please import COGNOS reports first.');
+      return;
+    }
+    
+    // Build lookup maps from source sheets
+    Logger.log('Building student lookup maps...');
+    
+    // Build attendance map: student ID -> [attendance code from column K]
+    // Column K is index 10 (zero-based)
+    const attendanceIdColumn = getStudentIdColumn(attendanceSheet);
+    const attendanceMap = buildStudentMap(attendanceSheet, attendanceIdColumn, [10]);
+    
+    // Build teacher map: student ID -> [teacher name from column G]
+    // Column G is index 6 (zero-based)
+    const coursesIdColumn = getStudentIdColumn(coursesSheet);
+    const teacherMap = buildStudentMap(coursesSheet, coursesIdColumn, [6]);
+    
+    // Build contact map: student ID -> [student email (M), guardian1 email (F), guardian2 email (J)]
+    // Column M is index 12, Column F is index 5, Column J is index 9 (zero-based)
+    const contactsIdColumn = getStudentIdColumn(contactsSheet);
+    const contactMap = buildStudentMap(contactsSheet, contactsIdColumn, [12, 5, 9]);
+    
+    Logger.log(`Built maps: ${attendanceMap.size} attendance records, ${teacherMap.size} teacher records, ${contactMap.size} contact records`);
+    
+    // Enrich the flex absences sheet
+    Logger.log('Enriching flex absences data...');
+    
+    // Add attendance codes to column L (or #N/A if not found)
+    addAttendanceCodes(flexSheet, attendanceMap);
+    
+    // Add teacher names to column M
+    addTeacherNames(flexSheet, teacherMap);
+    
+    // Add contact info to columns O-Q
+    addContactInfo(flexSheet, contactMap);
+    
+    Logger.log('Enrichment complete. Identifying skippers...');
+    
+    // Identify students with #N/A attendance codes (skippers)
+    const skippers = identifySkippers(flexSheet);
+    
+    // Copy skippers to Mail Out sheet
+    copySkippersToMailOut(flexSheet, skippers);
+    
+    // Display success message
+    const message = `Enrichment complete!\n\nIdentified ${skippers.length} skipper(s) and copied to Mail Out sheet.`;
+    showSuccessMessage(message);
+    
+    Logger.log(`Enrichment complete. ${skippers.length} skippers identified.`);
+    
+  } catch (error) {
+    Logger.log(`Error in enrichFlexAbsences: ${error.message}`);
+    showErrorMessage(`Failed to enrich flex absences data: ${error.message}`);
+  }
 }
 
 function syncComments() {

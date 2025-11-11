@@ -78,26 +78,26 @@
   - Display success message with count of reports imported
   - _Requirements: 1.5, 1.6, 2.1, 2.2, 2.3, 2.5, 2.6, 2.7_
 
-- [ ] 9. Implement Enrichment Service Module
-- [ ] 9.1 Create student lookup map building functions
+- [x] 9. Implement Enrichment Service Module
+- [x] 9.1 Create student lookup map building functions
   - Write `getStudentIdColumn(sheet)` function to identify which column contains student ID
   - Write `buildStudentMap(sheet, idColumn, dataColumns)` function to create student ID → data lookup map
   - Build maps from BHS attendance (attendance codes), 2nd period default (teacher names), and contact info (emails)
   - _Requirements: 4.3, 4.5, 4.6_
 
-- [ ] 9.2 Create data enrichment functions
+- [x] 9.2 Create data enrichment functions
   - Write `addAttendanceCodes(flexSheet, attendanceMap)` function to add attendance codes or #N/A to column L
   - Write `addTeacherNames(flexSheet, teacherMap)` function to add teacher names to column M
   - Write `addContactInfo(flexSheet, contactMap)` function to add emails to columns O-Q
   - _Requirements: 4.3, 4.4, 4.5, 4.6_
 
-- [ ] 9.3 Create skipper identification functions
+- [x] 9.3 Create skipper identification functions
   - Write `identifySkippers(flexSheet)` function to find rows with #N/A in column L
   - Write `copySkippersToMailOut(flexSheet, skipperRows)` function to copy skipper data to Mail Out sheet
   - Clear existing Mail Out sheet data before adding new skippers
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 9.4 Create main enrichment orchestration function
+- [x] 9.4 Create main enrichment orchestration function
   - Write `enrichFlexAbsences()` function to orchestrate the entire enrichment workflow
   - Preserve FlexiSched data in columns A-K during enrichment
   - Display success message with count of skippers identified
