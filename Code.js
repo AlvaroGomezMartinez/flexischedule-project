@@ -95,7 +95,98 @@ function onOpen() {
     .addItem('Import COGNOS Reports from GMail', 'importCognosReports')
     .addItem('Add data to Flex Absences sheet', 'enrichFlexAbsences')
     .addItem('Sync Comments from Mail Out sheet', 'syncComments')
+    .addSeparator()
+    .addItem('Help', 'openHelpDocument')
     .addToUi();
+}
+
+/**
+ * Opens the FlexiSched Directions Google Doc in a new browser tab
+ */
+function openHelpDocument() {
+  const docId = '1rbjRHQ_4XxhCxDrPdaPX97d0frXToJT0FhZVa8slFR4';
+  const url = `https://docs.google.com/document/d/${docId}/edit`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <base target="_blank">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+            margin: 0;
+          }
+          .hidden {
+            display: none;
+          }
+          .link-container {
+            margin-top: 15px;
+          }
+          a {
+            color: #4285f4;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 16px;
+          }
+          a:hover {
+            text-decoration: underline;
+          }
+          p {
+            color: #666;
+            font-size: 14px;
+            margin: 10px 0;
+          }
+          .close-btn {
+            margin-top: 15px;
+            padding: 8px 16px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+          }
+          .close-btn:hover {
+            background-color: #357ae8;
+          }
+        </style>
+      </head>
+      <body>
+        <div id="message">
+          <p>Click the link below to open the help document:</p>
+          <div class="link-container">
+            <a href="${url}" target="_blank" onclick="linkClicked()">📖 Open FlexiSched Help</a>
+          </div>
+          <button class="close-btn" onclick="google.script.host.close()">Close</button>
+        </div>
+        <script>
+          var opened = window.open('${url}', '_blank');
+          
+          function linkClicked() {
+            setTimeout(function() {
+              google.script.host.close();
+            }, 500);
+          }
+          
+          // If popup opened successfully, auto-close after a moment
+          if (opened) {
+            setTimeout(function() {
+              google.script.host.close();
+            }, 1000);
+          }
+        </script>
+      </body>
+    </html>
+  `;
+  
+  const htmlOutput = HtmlService.createHtmlOutput(html)
+    .setWidth(350)
+    .setHeight(150);
+  
+  SpreadsheetApp.getUi().showModelessDialog(htmlOutput, 'FlexiSched Help');
 }
 
 /**
