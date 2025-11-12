@@ -79,17 +79,13 @@ The system expects the following sheets in your spreadsheet:
 
 ## Sheet Structure
 
-### Flex Absences Sheet (Columns A-Q)
-- A-K: FlexiSched data (manually entered by copying and pasting the data from a FlexiSched report)
-- L: Attendance Code (auto-populated)
-- M: 2nd Period Teacher (auto-populated)
-- N: Comments
-- O: Student Email (auto-populated)
-- P: Guardian 1 Email (auto-populated)
-- Q: Guardian 2 Email (auto-populated)
+For detailed column-by-column documentation of all sheets, see [SHEETS_STRUCTURE.md](SHEETS_STRUCTURE.md).
 
-### Mail Out Sheet
-Contains only students who skipped (those with "#N/A" in attendance code column), ready for FormMule processing.
+### Quick Overview
+
+**Flex Absences Sheet**: Contains columns A-Q with FlexiSched data (A-K manually entered) and enriched data (L-Q auto-populated with attendance codes, teacher names, and contact information).
+
+**Mail Out Sheet**: Contains only students who skipped (those with "#N/A" in attendance code column), ready for FormMule processing.
 
 ## Permissions
 
@@ -131,6 +127,7 @@ The script requires the following OAuth scopes:
 ├── appsscript.json      # Apps Script manifest
 ├── .clasp.json          # Clasp configuration
 ├── .claspignore         # Clasp ignore rules
+├── SHEETS_STRUCTURE.md  # Detailed sheet structure documentation
 └── README.md            # This file
 ```
 
