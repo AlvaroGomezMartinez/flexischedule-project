@@ -96,6 +96,7 @@ function onOpen() {
     .addItem('Add data to Flex Absences sheet', 'enrichFlexAbsences')
     .addItem('Sync Comments from Mail Out sheet', 'syncComments')
     .addSeparator()
+    .addItem('Test Header Setup (Debug)', 'testSetupHeaders')
     .addItem('Help', 'openHelpDocument')
     .addToUi();
 }
@@ -262,31 +263,46 @@ function createTodaysFlexAbsencesSheet() {
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to set up headers for
  */
 function setupFlexAbsencesHeaders(sheet) {
-  // Set instruction in row 1 for user guidance
-  sheet.getRange('A1').setValue('Paste FlexiSched data here (will overwrite this row and row 2)');
-  sheet.getRange('A1').setFontStyle('italic');
-  sheet.getRange('A1').setFontColor('#666666');
-  
-  // Set enriched data headers in row 2 (columns M-R)
-  // These will be restored automatically when enrichment runs if overwritten
-  const headers = CONFIG.flexAbsencesHeaders;
-  sheet.getRange('M2').setValue(headers.M);  // Attendance Code
-  sheet.getRange('N2').setValue(headers.N);  // 2nd Period Teacher
-  sheet.getRange('O2').setValue(headers.O);  // Comments
-  sheet.getRange('P2').setValue(headers.P);  // Student Email
-  sheet.getRange('Q2').setValue(headers.Q);  // Guardian 1 Email
-  sheet.getRange('R2').setValue(headers.R);  // Guardian 2 Email
-  
-  // Format enrichment headers (bold)
-  sheet.getRange('M2:R2').setFontWeight('bold');
-  
-  // Add a note to cell A1 explaining the process
-  const instructionNote = 'Instructions:\n' +
-    '1. Delete all data from this sheet\n' +
-    '2. Paste FlexiSched report data (includes 2 header rows)\n' +
-    '3. Click "Add data to Flex Absences sheet" to enrich data\n\n' +
-    'The enrichment headers (M-R) will be automatically restored if overwritten.';
-  sheet.getRange('A1').setNote(instructionNote);
+  try {
+    Logger.log('Setting up flex absences headers...');
+    
+    // Set instruction in row 1 for user guidance
+    sheet.getRange('A1').setValue('Paste FlexiSched data here (will overwrite this row and row 2)');
+    sheet.getRange('A1').setFontStyle('italic');
+    sheet.getRange('A1').setFontColor('#666666');
+    
+    // Set enriched data headers in row 2 (columns M-R)
+    // These will be restored automatically when enrichment runs if overwritten
+    const headers = CONFIG.flexAbsencesHeaders;
+    Logger.log('Headers config:', headers);
+    
+    sheet.getRange('M2').setValue(headers.M);  // Attendance Code
+    sheet.getRange('N2').setValue(headers.N);  // 2nd Period Teacher
+    sheet.getRange('O2').setValue(headers.O);  // Comments
+    sheet.getRange('P2').setValue(headers.P);  // Student Email
+    sheet.getRange('Q2').setValue(headers.Q);  // Guardian 1 Email
+    sheet.getRange('R2').setValue(headers.R);  // Guardian 2 Email
+    
+    Logger.log('Headers set in row 2, columns M-R');
+    
+    // Format enrichment headers (bold)
+    sheet.getRange('M2:R2').setFontWeight('bold');
+    Logger.log('Headers formatted as bold');
+    
+    // Add a note to cell A1 explaining the process
+    const instructionNote = 'Instructions:\n' +
+      '1. Delete all data from this sheet\n' +
+      '2. Paste FlexiSched report data (includes 2 header rows)\n' +
+      '3. Click "Add data to Flex Absences sheet" to enrich data\n\n' +
+      'The enrichment headers (M-R) will be automatically restored if overwritten.';
+    sheet.getRange('A1').setNote(instructionNote);
+    
+    Logger.log('Setup complete for flex absences headers');
+    
+  } catch (error) {
+    Logger.log(`Error in setupFlexAbsencesHeaders: ${error.message}`);
+    throw error;
+  }
 }
 
 // ============================================================================
@@ -1031,6 +1047,14 @@ function addAttendanceCodes(flexSheet, attendanceMap) {
       }
     }
     
+    // Ensure header is set for column M before writing data
+    const headerM = flexSheet.getRange('M2');
+    if (!headerM.getValue() || headerM.getValue() !== CONFIG.flexAbsencesHeaders.M) {
+      headerM.setValue(CONFIG.flexAbsencesHeaders.M);
+      headerM.setFontWeight('bold');
+      Logger.log('Set header for column M: ' + CONFIG.flexAbsencesHeaders.M);
+    }
+    
     // Write attendance codes to column M (column 13) starting from row 3
     const targetRange = flexSheet.getRange(3, 13, attendanceCodes.length, 1);
     targetRange.setValues(attendanceCodes);
@@ -1083,6 +1107,14 @@ function addTeacherNames(flexSheet, teacherMap) {
         // Student not found in 2nd period default - leave empty
         teacherNames.push(['']);
       }
+    }
+    
+    // Ensure header is set for column N before writing data
+    const headerN = flexSheet.getRange('N2');
+    if (!headerN.getValue() || headerN.getValue() !== CONFIG.flexAbsencesHeaders.N) {
+      headerN.setValue(CONFIG.flexAbsencesHeaders.N);
+      headerN.setFontWeight('bold');
+      Logger.log('Set header for column N: ' + CONFIG.flexAbsencesHeaders.N);
     }
     
     // Write teacher names to column N (column 14) starting from row 3
@@ -1139,6 +1171,36 @@ function addContactInfo(flexSheet, contactMap) {
         // Student not found in contact info - leave empty
         contactInfo.push(['', '', '']);
       }
+    }
+    
+    // Ensure headers are set for columns O, P-R before writing data
+    const headerO = flexSheet.getRange('O2');
+    const headerP = flexSheet.getRange('P2');
+    const headerQ = flexSheet.getRange('Q2');
+    const headerR = flexSheet.getRange('R2');
+    
+    if (!headerO.getValue() || headerO.getValue() !== CONFIG.flexAbsencesHeaders.O) {
+      headerO.setValue(CONFIG.flexAbsencesHeaders.O);
+      headerO.setFontWeight('bold');
+      Logger.log('Set header for column O: ' + CONFIG.flexAbsencesHeaders.O);
+    }
+    
+    if (!headerP.getValue() || headerP.getValue() !== CONFIG.flexAbsencesHeaders.P) {
+      headerP.setValue(CONFIG.flexAbsencesHeaders.P);
+      headerP.setFontWeight('bold');
+      Logger.log('Set header for column P: ' + CONFIG.flexAbsencesHeaders.P);
+    }
+    
+    if (!headerQ.getValue() || headerQ.getValue() !== CONFIG.flexAbsencesHeaders.Q) {
+      headerQ.setValue(CONFIG.flexAbsencesHeaders.Q);
+      headerQ.setFontWeight('bold');
+      Logger.log('Set header for column Q: ' + CONFIG.flexAbsencesHeaders.Q);
+    }
+    
+    if (!headerR.getValue() || headerR.getValue() !== CONFIG.flexAbsencesHeaders.R) {
+      headerR.setValue(CONFIG.flexAbsencesHeaders.R);
+      headerR.setFontWeight('bold');
+      Logger.log('Set header for column R: ' + CONFIG.flexAbsencesHeaders.R);
     }
     
     // Write contact info to columns P-R (columns 16-18) starting from row 3
@@ -1251,17 +1313,15 @@ function copySkippersToMailOut(flexSheet, skipperRows) {
  */
 function ensureEnrichmentHeaders(flexSheet) {
   try {
+    Logger.log('Ensuring enrichment headers are present...');
     const lastColumn = flexSheet.getLastColumn();
-    
-    // Check if we have at least 18 columns (A-R)
-    if (lastColumn < 18) {
-      Logger.log('Sheet does not have enough columns, will add headers when writing data');
-      return;
-    }
+    Logger.log(`Sheet has ${lastColumn} columns`);
     
     // Get current headers in row 2, columns M-R (columns 13-18)
+    // We'll read what's there, even if the sheet doesn't have all columns yet
     const headerRange = flexSheet.getRange(2, 13, 1, 6);
     const currentHeaders = headerRange.getValues()[0];
+    Logger.log('Current headers in M2:R2:', currentHeaders);
     
     // Check if any of the enrichment headers are missing or empty
     const expectedHeaders = [
@@ -1286,12 +1346,17 @@ function ensureEnrichmentHeaders(flexSheet) {
     
     if (needsUpdate) {
       Logger.log('Restoring missing enrichment headers in row 2, columns M-R');
+      Logger.log('Expected headers:', expectedHeaders);
       
       // Set the enrichment headers in row 2
       headerRange.setValues([expectedHeaders]);
       headerRange.setFontWeight('bold');
       
       Logger.log('Successfully restored enrichment headers');
+      
+      // Verify they were set
+      const verifyHeaders = headerRange.getValues()[0];
+      Logger.log('Verified headers after setting:', verifyHeaders);
     } else {
       Logger.log('Enrichment headers are already present and correct');
     }
@@ -1299,6 +1364,36 @@ function ensureEnrichmentHeaders(flexSheet) {
   } catch (error) {
     Logger.log(`Error ensuring enrichment headers: ${error.message}`);
     // Don't throw error - this is not critical, enrichment can still proceed
+  }
+}
+
+/**
+ * Test function to manually set up headers in the flex absences sheet
+ * This can be used for debugging header setup issues
+ */
+function testSetupHeaders() {
+  try {
+    Logger.log('Starting manual header setup test...');
+    
+    const flexSheet = getFlexAbsencesSheet();
+    if (!flexSheet) {
+      showErrorMessage('Could not find flex absences sheet. Please create one first.');
+      return;
+    }
+    
+    Logger.log(`Found flex absences sheet: ${flexSheet.getName()}`);
+    
+    // Force setup headers
+    setupFlexAbsencesHeaders(flexSheet);
+    
+    // Also force ensure headers
+    ensureEnrichmentHeaders(flexSheet);
+    
+    showSuccessMessage('Header setup test completed. Check the execution log for details.');
+    
+  } catch (error) {
+    Logger.log(`Error in testSetupHeaders: ${error.message}`);
+    showErrorMessage(`Header setup test failed: ${error.message}`);
   }
 }
 
