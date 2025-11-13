@@ -1469,7 +1469,7 @@ function buildCommentMap(mailOutSheet, idColumn) {
 }
 
 /**
- * Updates comments in column N of the Flex Absences sheet from the comment map
+ * Updates comments in column L (FlexiSched Comment) of the Flex Absences sheet from the comment map
  * Preserves existing comments for students not in the map
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet
@@ -1533,7 +1533,7 @@ function updateFlexComments(flexSheet, commentMap) {
 
 /**
  * Main orchestration function for syncing comments from Mail Out sheet to Flex Absences sheet
- * Copies comments from column N of Mail Out to column N of Flex Absences
+ * Copies comments from column O of Mail Out to column L (FlexiSched Comment) of Flex Absences
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 function syncComments() {

@@ -8,25 +8,26 @@ Daily sheet created with format `[Date] flex absences` (e.g., "11.3 flex absence
 
 | Column | Header | Source | Description |
 |--------|--------|--------|-------------|
-| A | ID | Manual Entry | Student ID from FlexiSched |
-| B | First Name | Manual Entry | Student first name |
-| C | Last Name | Manual Entry | Student last name |
-| D | Grade | Manual Entry | Student grade level |
-| E | Flex Name | Manual Entry | Name of flex class |
-| F | Type | Manual Entry | Absence type |
-| G | Request | Manual Entry | Request details |
-| H | Day | Manual Entry | Day of week |
-| I | Period | Manual Entry | Period number |
-| J | Date | Manual Entry | Date of absence |
-| K | Flex Status | Manual Entry | Status from FlexiSched |
-| L | Brennan Attendance | Auto-populated | Attendance code from BHS attendance sheet |
-| M | 2nd Period Teacher | Auto-populated | Teacher name from 2nd period default sheet |
-| N | Comment | Manual/Synced | Comments (synced from Mail Out sheet) |
-| O | Student Email | Auto-populated | From contact info sheet |
-| P | Guardian 1 Email | Auto-populated | From contact info sheet |
-| Q | Guardian 2 Email | Auto-populated | From contact info sheet |
+| A | ID | FlexiSched Data | Student ID from FlexiSched |
+| B | First Name | FlexiSched Data | Student first name |
+| C | Last Name | FlexiSched Data | Student last name |
+| D | Grade | FlexiSched Data | Student grade level |
+| E | Flex Name | FlexiSched Data | Name of flex class |
+| F | Type | FlexiSched Data | Absence type |
+| G | Request | FlexiSched Data | Request details |
+| H | Day | FlexiSched Data | Day of week |
+| I | Period | FlexiSched Data | Period number |
+| J | Date | FlexiSched Data | Date of absence |
+| K | Flex Status | FlexiSched Data | Status from FlexiSched |
+| L | Comment | FlexiSched Data/Synced | FlexiSched comment (synced from Mail Out sheet) |
+| M | Attendance Code | Auto-populated | Attendance code from BHS attendance sheet |
+| N | 2nd Period Teacher | Auto-populated | Teacher name from 2nd period default sheet |
+| O | Comments | Auto-populated | Additional comments field |
+| P | Student Email | Auto-populated | From contact info sheet |
+| Q | Guardian 1 Email | Auto-populated | From contact info sheet |
+| R | Guardian 2 Email | Auto-populated | From contact info sheet |
 
-**Note**: Columns A-K are manually entered by copying data from FlexiSched reports. Columns L-Q are automatically populated by the script.
+**Note**: Columns A-L are from FlexiSched report data (pasted by user). Columns M-R are automatically populated by the script.
 
 ---
 
@@ -111,23 +112,24 @@ Automatically populated with students who have "#N/A" in the Brennan Attendance 
 | I | Period | From Flex Absences | Period number |
 | J | Date | From Flex Absences | Date of absence |
 | K | Flex Status | From Flex Absences | Status from FlexiSched |
-| L | Brennan Attendance | From Flex Absences | Shows "#N/A" for skippers |
-| M | 2nd Period Teacher | From Flex Absences | Teacher name |
-| N | Comment | Manual Entry | Comments for parent notification |
-| O | Student Email | From Flex Absences | Student email address |
-| P | Guardian 1 Email | From Flex Absences | Guardian 1 email address |
-| Q | Guardian 2 Email | From Flex Absences | Guardian 2 email address |
-| R | [Date] - Send Status | FormMule | Email send status (e.g., "11.3 - Send Status") |
+| L | Comment | From Flex Absences | FlexiSched comment |
+| M | Attendance Code | From Flex Absences | Shows "#N/A" for skippers |
+| N | 2nd Period Teacher | From Flex Absences | Teacher name |
+| O | Comments | Manual Entry | Comments for parent notification |
+| P | Student Email | From Flex Absences | Student email address |
+| Q | Guardian 1 Email | From Flex Absences | Guardian 1 email address |
+| R | Guardian 2 Email | From Flex Absences | Guardian 2 email address |
+| S | [Date] - Send Status | FormMule | Email send status (e.g., "11.3 - Send Status") |
 
-**Note**: Column R header changes based on the date (e.g., "11.3 - Send Status" for November 3rd).
+**Note**: Column S header changes based on the date (e.g., "11.3 - Send Status" for November 3rd).
 
 ---
 
 ## Data Flow
 
 1. **COGNOS Reports** → Import into BHS attendance, 2nd period default, and contact info sheets
-2. **FlexiSched Report** → Manual entry into columns A-K of Flex Absences sheet
-3. **Enrichment Script** → Populates columns L-Q of Flex Absences sheet using VLOOKUP-style matching
-4. **Skipper Detection** → Students with "#N/A" in column L are copied to Mail Out sheet
+2. **FlexiSched Report** → Manual paste into columns A-L of Flex Absences sheet
+3. **Enrichment Script** → Populates columns M-R of Flex Absences sheet using VLOOKUP-style matching
+4. **Skipper Detection** → Students with "#N/A" in column M are copied to Mail Out sheet
 5. **FormMule Processing** → Mail Out sheet used to send parent notifications
-6. **Comment Sync** → Comments from Mail Out sheet (column N) synced back to Flex Absences sheet
+6. **Comment Sync** → Comments from Mail Out sheet (column O) synced back to Flex Absences sheet (column L)
