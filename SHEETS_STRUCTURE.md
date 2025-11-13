@@ -22,12 +22,11 @@ Daily sheet created with format `[Date] flex absences` (e.g., "11.3 flex absence
 | L | Comment | FlexiSched Data/Synced | FlexiSched comment (synced from Mail Out sheet) |
 | M | Attendance Code | Auto-populated | Attendance code from BHS attendance sheet |
 | N | 2nd Period Teacher | Auto-populated | Teacher name from 2nd period default sheet |
-| O | Comments | Auto-populated | Additional comments field |
-| P | Student Email | Auto-populated | From contact info sheet column N |
-| Q | Guardian 1 Email | Auto-populated | From contact info sheet column G |
-| R | Guardian 2 Email | Auto-populated | From contact info sheet column K |
+| O | Student Email | Auto-populated | From contact info sheet column N |
+| P | Guardian 1 Email | Auto-populated | From contact info sheet column G |
+| Q | Guardian 2 Email | Auto-populated | From contact info sheet column K |
 
-**Note**: Columns A-L are from FlexiSched report data (pasted by user). Columns M-R are automatically populated by the script.
+**Note**: Columns A-L are from FlexiSched report data (pasted by user). Columns M-Q are automatically populated by the script.
 
 ---
 
@@ -115,15 +114,14 @@ Automatically populated with students who have "#N/A" in the Brennan Attendance 
 | J | Date | From Flex Absences | Date of absence |
 | K | Flex Status | From Flex Absences | Status from FlexiSched |
 | L | Comment | From Flex Absences | FlexiSched comment |
-| M | Attendance Code | From Flex Absences | Shows "#N/A" for skippers |
+| M | Brennan Attendance | From Flex Absences | Shows "#N/A" for skippers |
 | N | 2nd Period Teacher | From Flex Absences | Teacher name |
-| O | Comments | Manual Entry | Comments for parent notification |
-| P | Student Email | From Flex Absences | Student email address |
-| Q | Guardian 1 Email | From Flex Absences | Guardian 1 email address |
-| R | Guardian 2 Email | From Flex Absences | Guardian 2 email address |
-| S | [Date] - Send Status | FormMule | Email send status (e.g., "11.3 - Send Status") |
+| O | Student Email | From Flex Absences | Student email address |
+| P | Guardian 1 Email | From Flex Absences | Guardian 1 email address |
+| Q | Guardian 2 Email | From Flex Absences | Guardian 2 email address |
+| R | [Date] - Send Status | FormMule | Email send status (e.g., "11.3 - Send Status") |
 
-**Note**: Column S header changes based on the date (e.g., "11.3 - Send Status" for November 3rd).
+**Note**: Column R header changes based on the date (e.g., "11.3 - Send Status" for November 3rd).
 
 ---
 
@@ -131,7 +129,7 @@ Automatically populated with students who have "#N/A" in the Brennan Attendance 
 
 1. **COGNOS Reports** → Import into BHS attendance, 2nd period default, and contact info sheets
 2. **FlexiSched Report** → Manual paste into columns A-L of Flex Absences sheet
-3. **Enrichment Script** → Populates columns M-R of Flex Absences sheet using VLOOKUP-style matching
+3. **Enrichment Script** → Populates columns M-Q of Flex Absences sheet using VLOOKUP-style matching
 4. **Skipper Detection** → Students with "#N/A" in column M are copied to Mail Out sheet
 5. **FormMule Processing** → Mail Out sheet used to send parent notifications
-6. **Comment Sync** → Comments from Mail Out sheet (column O) synced back to Flex Absences sheet (column L)
+6. **Comment Sync** → Comments from Mail Out sheet (column L) synced back to Flex Absences sheet (column L)
