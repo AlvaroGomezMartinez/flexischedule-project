@@ -73,9 +73,9 @@ const CONFIG = {
     M: 'Attendance Code',
     N: '2nd Period Teacher',
     O: 'Comments',
-    P: 'Student Email',
-    Q: 'Guardian 1 Email',
-    R: 'Guardian 2 Email'
+    P: 'Student Email',        // From contact info column N
+    Q: 'Guardian 1 Email',     // From contact info column G
+    R: 'Guardian 2 Email'      // From contact info column K
   }
 };
 
@@ -1131,9 +1131,10 @@ function addTeacherNames(flexSheet, teacherMap) {
 
 /**
  * Adds contact information (emails) from contact info sheet to flex absences sheet columns P-R
+ * Column mapping: Contact Info N→Flex P, Contact Info G→Flex Q, Contact Info K→Flex R
  * Requirements: 4.3, 4.4, 4.5, 4.6
  * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet
- * @param {Map<string, Array>} contactMap - Map of student ID to [student email, guardian1 email, guardian2 email]
+ * @param {Map<string, Array>} contactMap - Map of student ID to [student email(N), guardian1 email(G), guardian2 email(K)]
  */
 function addContactInfo(flexSheet, contactMap) {
   try {
@@ -1150,6 +1151,18 @@ function addContactInfo(flexSheet, contactMap) {
     
     // Prepare contact info to write to columns P-R
     const contactInfo = [];
+    let foundCount = 0;
+    let notFoundCount = 0;
+    
+    Logger.log(`Processing ${studentIds.length} students for contact info`);
+    Logger.log(`Contact map has ${contactMap.size} entries`);
+    
+    // Show first few student IDs we're looking for
+    Logger.log('Student IDs from flex sheet (first few):');
+    for (let i = 0; i < Math.min(3, studentIds.length); i++) {
+      const studentId = String(studentIds[i][0]).trim();
+      Logger.log(`  "${studentId}" (type: ${typeof studentIds[i][0]})`);
+    }
     
     for (let i = 0; i < studentIds.length; i++) {
       const studentId = String(studentIds[i][0]).trim();
@@ -1163,15 +1176,32 @@ function addContactInfo(flexSheet, contactMap) {
       // Lookup student in contact map
       if (contactMap.has(studentId)) {
         const data = contactMap.get(studentId);
-        const studentEmail = data[0] || '';    // First element is student email
-        const guardian1Email = data[1] || '';  // Second element is guardian 1 email
-        const guardian2Email = data[2] || '';  // Third element is guardian 2 email
+        // data[0] = Column N (Student Email) → goes to Column P
+        // data[1] = Column G (Guardian 1 Email) → goes to Column Q  
+        // data[2] = Column K (Guardian 2 Email) → goes to Column R
+        const studentEmail = data[0] || '';    // Column N → Column P
+        const guardian1Email = data[1] || '';  // Column G → Column Q
+        const guardian2Email = data[2] || '';  // Column K → Column R
         contactInfo.push([studentEmail, guardian1Email, guardian2Email]);
+        foundCount++;
+        
+        // Log first few matches for debugging
+        if (foundCount <= 3) {
+          Logger.log(`Student ${studentId} found: P=${studentEmail}, Q=${guardian1Email}, R=${guardian2Email}`);
+        }
       } else {
         // Student not found in contact info - leave empty
         contactInfo.push(['', '', '']);
+        notFoundCount++;
+        
+        // Log first few misses for debugging
+        if (notFoundCount <= 3) {
+          Logger.log(`Student ${studentId} NOT found in contact map`);
+        }
       }
     }
+    
+    Logger.log(`Contact info results: ${foundCount} found, ${notFoundCount} not found`);
     
     // Ensure headers are set for columns O, P-R before writing data
     const headerO = flexSheet.getRange('O2');
@@ -1460,10 +1490,48 @@ function enrichFlexAbsences() {
     const coursesIdColumn = getStudentIdColumn(coursesSheet);
     const teacherMap = buildStudentMap(coursesSheet, coursesIdColumn, [6]);
     
-    // Build contact map: student ID -> [student email (M), guardian1 email (F), guardian2 email (J)]
-    // Column M is index 12, Column F is index 5, Column J is index 9 (zero-based)
-    const contactsIdColumn = getStudentIdColumn(contactsSheet);
-    const contactMap = buildStudentMap(contactsSheet, contactsIdColumn, [12, 5, 9]);
+    // Build contact map: student ID -> [student email (N), guardian1 email (G), guardian2 email (K)]
+    // Student ID is in column B (index 1), not A
+    // Column N is index 13, Column G is index 6, Column K is index 10 (zero-based)
+    // Mapping: N→P, G→Q, K→R
+    const contactsIdColumn = 1;  // Column B for contact sheet
+    Logger.log('Building contact map from columns: N(13)→P, G(6)→Q, K(10)→R');
+    
+    // Debug: Check contact sheet data
+    const contactLastRow = contactsSheet.getLastRow();
+    const contactLastCol = contactsSheet.getLastColumn();
+    Logger.log(`Contact sheet has ${contactLastRow} rows and ${contactLastCol} columns`);
+    
+    if (contactLastRow > 1) {
+      // Show first few rows of contact data for debugging
+      const sampleRange = contactsSheet.getRange(1, 1, Math.min(4, contactLastRow), Math.min(13, contactLastCol));
+      const sampleData = sampleRange.getValues();
+      Logger.log('Contact sheet sample data (first few rows):');
+      sampleData.forEach((row, index) => {
+        Logger.log(`  Row ${index + 1}: [${row.slice(0, 5).join(', ')}...] (showing first 5 columns)`);
+      });
+      
+      // Show student ID column specifically
+      if (contactLastRow > 1) {
+        const idRange = contactsSheet.getRange(2, 1, Math.min(3, contactLastRow - 1), 1);
+        const idData = idRange.getValues();
+        Logger.log('Student IDs in contact sheet (first few):');
+        idData.forEach((row, index) => {
+          Logger.log(`  Row ${index + 2}: "${row[0]}" (type: ${typeof row[0]})`);
+        });
+      }
+    }
+    
+    const contactMap = buildStudentMap(contactsSheet, contactsIdColumn, [13, 6, 10]);
+    
+    // Log some sample contact data for debugging
+    if (contactMap.size > 0) {
+      const sampleEntries = Array.from(contactMap.entries()).slice(0, 3);
+      Logger.log('Sample contact map entries:');
+      sampleEntries.forEach(([id, emails]) => {
+        Logger.log(`  ${id}: [${emails.join(', ')}]`);
+      });
+    }
     
     Logger.log(`Built maps: ${attendanceMap.size} attendance records, ${teacherMap.size} teacher records, ${contactMap.size} contact records`);
     

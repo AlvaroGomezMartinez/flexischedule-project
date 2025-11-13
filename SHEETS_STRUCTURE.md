@@ -23,9 +23,9 @@ Daily sheet created with format `[Date] flex absences` (e.g., "11.3 flex absence
 | M | Attendance Code | Auto-populated | Attendance code from BHS attendance sheet |
 | N | 2nd Period Teacher | Auto-populated | Teacher name from 2nd period default sheet |
 | O | Comments | Auto-populated | Additional comments field |
-| P | Student Email | Auto-populated | From contact info sheet |
-| Q | Guardian 1 Email | Auto-populated | From contact info sheet |
-| R | Guardian 2 Email | Auto-populated | From contact info sheet |
+| P | Student Email | Auto-populated | From contact info sheet column N |
+| Q | Guardian 1 Email | Auto-populated | From contact info sheet column G |
+| R | Guardian 2 Email | Auto-populated | From contact info sheet column K |
 
 **Note**: Columns A-L are from FlexiSched report data (pasted by user). Columns M-R are automatically populated by the script.
 
@@ -79,19 +79,21 @@ Populated by COGNOS import from "My Student CY List - Student Email/Contact Info
 
 | Column | Header | Description |
 |--------|--------|-------------|
-| A | Student ID | Student ID number |
-| B | Student Name | Full student name |
-| C | Grade Level | Student grade level |
-| D | Notification | Notification preference |
-| E | Guardian 1 | Guardian 1 name |
-| F | Guardian 1 Email | Guardian 1 email address |
-| G | Guardian 1 Cell | Guardian 1 cell phone |
-| H | Guardian 1 Home | Guardian 1 home phone |
-| I | Guardian 2 | Guardian 2 name |
-| J | Guardian 2 Email | Guardian 2 email address |
-| K | Guardian 2 Cell | Guardian 2 cell phone |
-| L | Guardian 2 Home | Guardian 2 home phone |
-| M | Student Email | Student email address |
+| A | Current Building | School building name |
+| B | Student ID | Student ID number |
+| C | Student Name | Full student name |
+| D | Grade Level | Student grade level |
+| E | Notification | Notification preference |
+| F | Guardian 1 | Guardian 1 name |
+| G | Guardian 1 Email | Guardian 1 email address |
+| H | Guardian 1 Cell | Guardian 1 cell phone |
+| I | Guardian 1 Home | Guardian 1 home phone |
+| J | Guardian 2 | Guardian 2 name |
+| K | Guardian 2 Email | Guardian 2 email address |
+| L | Guardian 2 Cell | Guardian 2 cell phone |
+| M | Guardian 2 Home | Guardian 2 home phone |
+| N | Student Email | Student email address |
+| O | Count(Student_Id) | Student count |
 
 ---
 
