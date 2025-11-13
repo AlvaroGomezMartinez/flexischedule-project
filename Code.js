@@ -6,21 +6,21 @@
 // Email configuration for the three COGNOS reports
 const EMAIL_CONFIG = {
   attendance: {
-    subject: 'My ATT - Attendance Bulletin (1)',
+    subject: 'A new version of My ATT - Attendance Bulletin is available',
     sheetName: 'BHS attendance',
     attendanceCodeColumn: 'K',  // Attendance code column
     periodColumn: 'J',           // Period column for filtering
     periodFilter: '02'           // Only import 2nd period rows (stored as text)
   },
   courses: {
-    subject: 'My Student CY List - Courses, Teacher & Room',
+    subject: 'A new version of My Student CY List - Course, Teacher & Room is available',
     sheetName: '2nd period default',
     teacherColumn: 'G',  // Teacher name column (after reordering)
     originalColumns: ['Student Name', 'Student Id', 'Grade', '9th Grd Entry', 'Period', 'Description', 'Room', 'Instructor', 'Instructor ID', 'Instructor Email'],
     targetColumns: ['Student Id', 'Student Name', 'Grade', 'Period', 'Description', 'Room', 'Instructor', 'Instructor Id', 'Instructor Email']
   },
   contacts: {
-    subject: 'My Student CY List - Student Email/Contact Info - Next Year Option (1)',
+    subject: 'A new version of My Student CY List - Student Email/Contact Info - Next Year Option is available',
     sheetName: 'contact info',
     emailColumns: {
       student: 'M',
