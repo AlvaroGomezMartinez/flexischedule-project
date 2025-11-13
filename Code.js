@@ -255,28 +255,38 @@ function createTodaysFlexAbsencesSheet() {
 }
 
 /**
- * Sets up column headers for a flex absences sheet
- * Sets headers for columns A-Q (A-K for FlexiSched data, L-Q for enriched data)
+ * Sets up initial template for a flex absences sheet
+ * Provides user instructions and sets enrichment headers in row 2 (L-Q)
+ * FlexiSched data will be pasted by user and will include its own headers in rows 1-2
  * Requirements: 7.5, 7.6
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The sheet to set up headers for
  */
 function setupFlexAbsencesHeaders(sheet) {
-  // Set FlexiSched data headers (columns A-K)
-  const flexiSchedHeaders = ['ID', 'First Name', 'Last Name', 'Grade', 'Flex Name', 
-                              'Type', 'Request', 'Day', 'Period', 'Date', 'Flex Status'];
-  sheet.getRange('A1:K1').setValues([flexiSchedHeaders]);
+  // Set instruction in row 1 for user guidance
+  sheet.getRange('A1').setValue('Paste FlexiSched data here (will overwrite this row and row 2)');
+  sheet.getRange('A1').setFontStyle('italic');
+  sheet.getRange('A1').setFontColor('#666666');
   
-  // Set enriched data headers (columns L-Q)
+  // Set enriched data headers in row 2 (columns L-Q)
+  // These will be restored automatically when enrichment runs if overwritten
   const headers = CONFIG.flexAbsencesHeaders;
-  sheet.getRange('L1').setValue(headers.L);  // Attendance Code
-  sheet.getRange('M1').setValue(headers.M);  // 2nd Period Teacher
-  sheet.getRange('N1').setValue(headers.N);  // Comments
-  sheet.getRange('O1').setValue(headers.O);  // Student Email
-  sheet.getRange('P1').setValue(headers.P);  // Guardian 1 Email
-  sheet.getRange('Q1').setValue(headers.Q);  // Guardian 2 Email
+  sheet.getRange('L2').setValue(headers.L);  // Attendance Code
+  sheet.getRange('M2').setValue(headers.M);  // 2nd Period Teacher
+  sheet.getRange('N2').setValue(headers.N);  // Comments
+  sheet.getRange('O2').setValue(headers.O);  // Student Email
+  sheet.getRange('P2').setValue(headers.P);  // Guardian 1 Email
+  sheet.getRange('Q2').setValue(headers.Q);  // Guardian 2 Email
   
-  // Format entire header row (bold)
-  sheet.getRange('A1:Q1').setFontWeight('bold');
+  // Format enrichment headers (bold)
+  sheet.getRange('L2:Q2').setFontWeight('bold');
+  
+  // Add a note to cell A1 explaining the process
+  const instructionNote = 'Instructions:\n' +
+    '1. Delete all data from this sheet\n' +
+    '2. Paste FlexiSched report data (includes 2 header rows)\n' +
+    '3. Click "Add data to Flex Absences sheet" to enrich data\n\n' +
+    'The enrichment headers (L-Q) will be automatically restored if overwritten.';
+  sheet.getRange('A1').setNote(instructionNote);
 }
 
 // ============================================================================
@@ -989,13 +999,13 @@ function addAttendanceCodes(flexSheet, attendanceMap) {
   try {
     const lastRow = flexSheet.getLastRow();
     
-    if (lastRow <= 1) {
-      Logger.log('No data rows in flex absences sheet to enrich');
+    if (lastRow <= 2) {
+      Logger.log('No data rows in flex absences sheet to enrich (need at least 3 rows for FlexiSched data)');
       return;
     }
     
-    // Get student IDs from column A (starting from row 2, skipping headers)
-    const studentIdRange = flexSheet.getRange(2, 1, lastRow - 1, 1);
+    // Get student IDs from column A (starting from row 3, skipping FlexiSched headers in rows 1-2)
+    const studentIdRange = flexSheet.getRange(3, 1, lastRow - 2, 1);
     const studentIds = studentIdRange.getValues();
     
     // Prepare attendance codes to write to column L
@@ -1021,8 +1031,8 @@ function addAttendanceCodes(flexSheet, attendanceMap) {
       }
     }
     
-    // Write attendance codes to column L (column 12)
-    const targetRange = flexSheet.getRange(2, 12, attendanceCodes.length, 1);
+    // Write attendance codes to column L (column 12) starting from row 3
+    const targetRange = flexSheet.getRange(3, 12, attendanceCodes.length, 1);
     targetRange.setValues(attendanceCodes);
     
     Logger.log(`Added attendance codes to ${attendanceCodes.length} rows in flex absences sheet`);
@@ -1043,13 +1053,13 @@ function addTeacherNames(flexSheet, teacherMap) {
   try {
     const lastRow = flexSheet.getLastRow();
     
-    if (lastRow <= 1) {
-      Logger.log('No data rows in flex absences sheet to enrich');
+    if (lastRow <= 2) {
+      Logger.log('No data rows in flex absences sheet to enrich (need at least 3 rows for FlexiSched data)');
       return;
     }
     
-    // Get student IDs from column A (starting from row 2, skipping headers)
-    const studentIdRange = flexSheet.getRange(2, 1, lastRow - 1, 1);
+    // Get student IDs from column A (starting from row 3, skipping FlexiSched headers in rows 1-2)
+    const studentIdRange = flexSheet.getRange(3, 1, lastRow - 2, 1);
     const studentIds = studentIdRange.getValues();
     
     // Prepare teacher names to write to column M
@@ -1075,8 +1085,8 @@ function addTeacherNames(flexSheet, teacherMap) {
       }
     }
     
-    // Write teacher names to column M (column 13)
-    const targetRange = flexSheet.getRange(2, 13, teacherNames.length, 1);
+    // Write teacher names to column M (column 13) starting from row 3
+    const targetRange = flexSheet.getRange(3, 13, teacherNames.length, 1);
     targetRange.setValues(teacherNames);
     
     Logger.log(`Added teacher names to ${teacherNames.length} rows in flex absences sheet`);
@@ -1097,13 +1107,13 @@ function addContactInfo(flexSheet, contactMap) {
   try {
     const lastRow = flexSheet.getLastRow();
     
-    if (lastRow <= 1) {
-      Logger.log('No data rows in flex absences sheet to enrich');
+    if (lastRow <= 2) {
+      Logger.log('No data rows in flex absences sheet to enrich (need at least 3 rows for FlexiSched data)');
       return;
     }
     
-    // Get student IDs from column A (starting from row 2, skipping headers)
-    const studentIdRange = flexSheet.getRange(2, 1, lastRow - 1, 1);
+    // Get student IDs from column A (starting from row 3, skipping FlexiSched headers in rows 1-2)
+    const studentIdRange = flexSheet.getRange(3, 1, lastRow - 2, 1);
     const studentIds = studentIdRange.getValues();
     
     // Prepare contact info to write to columns O-Q
@@ -1131,8 +1141,8 @@ function addContactInfo(flexSheet, contactMap) {
       }
     }
     
-    // Write contact info to columns O-Q (columns 15-17)
-    const targetRange = flexSheet.getRange(2, 15, contactInfo.length, 3);
+    // Write contact info to columns O-Q (columns 15-17) starting from row 3
+    const targetRange = flexSheet.getRange(3, 15, contactInfo.length, 3);
     targetRange.setValues(contactInfo);
     
     Logger.log(`Added contact info to ${contactInfo.length} rows in flex absences sheet`);
@@ -1154,13 +1164,13 @@ function identifySkippers(flexSheet) {
     const skippers = [];
     const lastRow = flexSheet.getLastRow();
     
-    if (lastRow <= 1) {
-      Logger.log('No data rows in flex absences sheet to check for skippers');
+    if (lastRow <= 2) {
+      Logger.log('No data rows in flex absences sheet to check for skippers (need at least 3 rows for FlexiSched data)');
       return skippers;
     }
     
-    // Get all data from columns A-Q (columns 1-17) starting from row 2
-    const dataRange = flexSheet.getRange(2, 1, lastRow - 1, 17);
+    // Get all data from columns A-Q (columns 1-17) starting from row 3 (skipping FlexiSched headers)
+    const dataRange = flexSheet.getRange(3, 1, lastRow - 2, 17);
     const data = dataRange.getValues();
     
     // Check each row for #N/A in column L (index 11 in the array)
@@ -1171,7 +1181,7 @@ function identifySkippers(flexSheet) {
       // Check if attendance code is #N/A
       if (attendanceCode === '#N/A') {
         skippers.push({
-          rowIndex: i + 2,  // Actual row number in sheet (accounting for header row)
+          rowIndex: i + 3,  // Actual row number in sheet (accounting for two header rows)
           rowData: row      // All data from columns A-Q
         });
       }
@@ -1234,6 +1244,65 @@ function copySkippersToMailOut(flexSheet, skipperRows) {
 }
 
 /**
+ * Checks if enrichment headers are missing in row 2 and restores them if needed
+ * This handles the case where users paste FlexiSched data and overwrite the enrichment headers
+ * Requirements: 7.5, 7.6
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet
+ */
+function ensureEnrichmentHeaders(flexSheet) {
+  try {
+    const lastColumn = flexSheet.getLastColumn();
+    
+    // Check if we have at least 17 columns (A-Q)
+    if (lastColumn < 17) {
+      Logger.log('Sheet does not have enough columns, will add headers when writing data');
+      return;
+    }
+    
+    // Get current headers in row 2, columns L-Q (columns 12-17)
+    const headerRange = flexSheet.getRange(2, 12, 1, 6);
+    const currentHeaders = headerRange.getValues()[0];
+    
+    // Check if any of the enrichment headers are missing or empty
+    const expectedHeaders = [
+      CONFIG.flexAbsencesHeaders.L,  // 'Attendance Code'
+      CONFIG.flexAbsencesHeaders.M,  // '2nd Period Teacher'
+      CONFIG.flexAbsencesHeaders.N,  // 'Comments'
+      CONFIG.flexAbsencesHeaders.O,  // 'Student Email'
+      CONFIG.flexAbsencesHeaders.P,  // 'Guardian 1 Email'
+      CONFIG.flexAbsencesHeaders.Q   // 'Guardian 2 Email'
+    ];
+    
+    let needsUpdate = false;
+    for (let i = 0; i < expectedHeaders.length; i++) {
+      const currentHeader = String(currentHeaders[i] || '').trim();
+      const expectedHeader = expectedHeaders[i];
+      
+      if (currentHeader !== expectedHeader) {
+        needsUpdate = true;
+        Logger.log(`Header mismatch in column ${String.fromCharCode(76 + i)}: expected "${expectedHeader}", found "${currentHeader}"`);
+      }
+    }
+    
+    if (needsUpdate) {
+      Logger.log('Restoring missing enrichment headers in row 2, columns L-Q');
+      
+      // Set the enrichment headers in row 2
+      headerRange.setValues([expectedHeaders]);
+      headerRange.setFontWeight('bold');
+      
+      Logger.log('Successfully restored enrichment headers');
+    } else {
+      Logger.log('Enrichment headers are already present and correct');
+    }
+    
+  } catch (error) {
+    Logger.log(`Error ensuring enrichment headers: ${error.message}`);
+    // Don't throw error - this is not critical, enrichment can still proceed
+  }
+}
+
+/**
  * Main orchestration function for enriching flex absences data
  * Adds attendance codes, teacher names, and contact info, then identifies skippers
  * Requirements: 3.4, 4.3, 5.5
@@ -1252,12 +1321,15 @@ function enrichFlexAbsences() {
     
     Logger.log(`Found flex absences sheet: ${flexSheet.getName()}`);
     
-    // Check if there's data to enrich
+    // Check if there's data to enrich (need at least 3 rows: 2 FlexiSched headers + 1 data row)
     const lastRow = flexSheet.getLastRow();
-    if (lastRow <= 1) {
-      showErrorMessage('No data found in flex absences sheet. Please paste FlexiSched data first.');
+    if (lastRow <= 2) {
+      showErrorMessage('No data found in flex absences sheet. Please paste FlexiSched data first (need at least 3 rows: 2 headers + data).');
       return;
     }
+    
+    // Ensure enrichment headers are present in row 2 (restore if overwritten by FlexiSched paste)
+    ensureEnrichmentHeaders(flexSheet);
     
     // Get the three source sheets
     const attendanceSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.sheetNames.attendance);
@@ -1407,17 +1479,17 @@ function updateFlexComments(flexSheet, commentMap) {
   try {
     const lastRow = flexSheet.getLastRow();
     
-    if (lastRow <= 1) {
-      Logger.log('No data rows in flex absences sheet to update comments');
+    if (lastRow <= 2) {
+      Logger.log('No data rows in flex absences sheet to update comments (need at least 3 rows for FlexiSched data)');
       return;
     }
     
-    // Get student IDs from column A (starting from row 2, skipping headers)
-    const studentIdRange = flexSheet.getRange(2, 1, lastRow - 1, 1);
+    // Get student IDs from column A (starting from row 3, skipping FlexiSched headers in rows 1-2)
+    const studentIdRange = flexSheet.getRange(3, 1, lastRow - 2, 1);
     const studentIds = studentIdRange.getValues();
     
-    // Get existing comments from column N (column 14)
-    const existingCommentsRange = flexSheet.getRange(2, 14, lastRow - 1, 1);
+    // Get existing comments from column N (column 14) starting from row 3
+    const existingCommentsRange = flexSheet.getRange(3, 14, lastRow - 2, 1);
     const existingComments = existingCommentsRange.getValues();
     
     // Prepare updated comments to write to column N
@@ -1446,8 +1518,8 @@ function updateFlexComments(flexSheet, commentMap) {
       }
     }
     
-    // Write updated comments to column N (column 14)
-    const targetRange = flexSheet.getRange(2, 14, updatedComments.length, 1);
+    // Write updated comments to column N (column 14) starting from row 3
+    const targetRange = flexSheet.getRange(3, 14, updatedComments.length, 1);
     targetRange.setValues(updatedComments);
     
     Logger.log(`Updated comments in flex absences sheet: ${updatedCount} comments synced, ${unmatchedCount} students not in Mail Out`);
@@ -1478,10 +1550,10 @@ function syncComments() {
     
     Logger.log(`Found flex absences sheet: ${flexSheet.getName()}`);
     
-    // Check if there's data in flex absences sheet
+    // Check if there's data in flex absences sheet (need at least 3 rows for FlexiSched data)
     const flexLastRow = flexSheet.getLastRow();
-    if (flexLastRow <= 1) {
-      showErrorMessage('No data found in flex absences sheet.');
+    if (flexLastRow <= 2) {
+      showErrorMessage('No data found in flex absences sheet (need at least 3 rows: 2 headers + data).');
       return;
     }
     
