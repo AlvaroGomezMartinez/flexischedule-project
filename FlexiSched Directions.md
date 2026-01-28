@@ -10,7 +10,7 @@ The FlexiSched Attendance Automation system helps you identify students who skip
 
 ### Step 1: Create Today's Flex Absences Sheet
 
-1. Open the **Flex Absence Tracker** menu in Google Sheets  
+1. Open the **Flex Absence Tracker** menu in the Google Sheet  
 2. Select **Create today's flex absences sheet**  
 3. A new sheet will be created with today's date (e.g., "11.3 flex absences")  
 4. If the sheet already exists, you'll see a message confirming it
@@ -29,7 +29,7 @@ The FlexiSched Attendance Automation system helps you identify students who skip
 
    
 
-2. Open the **Flex Absence Tracker** menu  
+2. Open the **Flex Absence Tracker** menu in the Google Sheet  
      
 3. Select **Import COGNOS Reports from GMail**  
      
@@ -56,7 +56,7 @@ The FlexiSched Attendance Automation system helps you identify students who skip
 
 ### Step 3: Enter FlexiSched Data
 
-1. Open FlexiSched and generate your absence report  
+1. Login to the FlexiSched app and generate your absence report  
 2. Copy the absence data from FlexiSched  
 3. Navigate to today's flex absences sheet (e.g., "11.3 flex absences")  
 4. Paste the data into **columns A-L**. The data should start on Row 3 since the report from FlexiSched has two rows of headers.  
@@ -73,16 +73,14 @@ The FlexiSched Attendance Automation system helps you identify students who skip
    - Column K: Flex Status  
    - Column L: Comments
 
-**Note:** Do not paste data into columns M-Q. These will be automatically populated in the next step.
+**Note:** Do not paste data into columns M-R. These will be automatically populated in the next step.
 
 ---
 
 ### Step 4: Add Data to Flex Absences Sheet
 
-1. Open the **Flex Absence Tracker** menu  
-     
+1. Open the **Flex Absence Tracker** menu in the Google Sheet  
 2. Select **Add data to Flex Absences sheet**  
-     
 3. The system will automatically populate:  
      
    - **Column M:** Attendance Code (from BHS attendance sheet)  
@@ -90,15 +88,15 @@ The FlexiSched Attendance Automation system helps you identify students who skip
    - **Column N:** 2nd Period Teacher (from 2nd period default sheet)  
    - **Column O:** Student Email (from contact info sheet)  
    - **Column P:** Guardian 1 Email (from contact info sheet)  
-   - **Column Q:** Guardian 2 Email (from contact info sheet)
+   - **Column Q:** Guardian 2 Email (from contact info sheet)  
+   - **Column R:** 2nd Period Teacher Email (from contact sheet)
 
    
 
 4. Students with "\#N/A" in the Attendance Code column are automatically identified as **skippers**  
-     
 5. All skippers are copied to the **Mail Out** sheet for parent notification
 
-**What's a skipper?** A skipper is a student who was absent from their flex class but doesn't have a legitimate attendance code in the system (meaning they were present at school but skipped their flex).
+**Who's a skipper?** A skipper is a student who was absent from their flex class but doesn't have a legitimate attendance code in the system (meaning they were present at school but skipped their flex class).
 
 ---
 
@@ -118,7 +116,7 @@ The FlexiSched Attendance Automation system helps you identify students who skip
 
 After processing with FormMule, if you added comments in the Mail Out sheet:
 
-1. Open the **Flex Absence Tracker** menu  
+1. Open the **Flex Absence Tracker** menu in the Google Sheet  
 2. Select **Sync Comments from Mail Out sheet**  
 3. Comments from Column L of the Mail Out sheet will be copied back to Column L of the flex absences sheet  
 4. This keeps your records synchronized
@@ -137,6 +135,7 @@ After processing with FormMule, if you added comments in the Mail Out sheet:
 | O | Student Email | Auto-populated from contact info |
 | P | Guardian 1 Email | Auto-populated from contact info |
 | Q | Guardian 2 Email | Auto-populated from contact info |
+| R | 2nd Period Teacher Email | Auto-populated from 2nd period default |
 
 ### Mail Out Sheet
 
