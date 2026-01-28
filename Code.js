@@ -73,7 +73,8 @@ const CONFIG = {
     N: '2nd Period Teacher',
     O: 'Student Email',        // From contact info column N
     P: 'Guardian 1 Email',     // From contact info column G
-    Q: 'Guardian 2 Email'      // From contact info column K
+    Q: 'Guardian 2 Email',     // From contact info column K
+    R: '2nd Period Teacher Email' // From contact info column R
   }
 };
 
@@ -1126,12 +1127,78 @@ function addTeacherNames(flexSheet, teacherMap) {
   }
 }
 
+/** 
+ * Adds teacher emails from 2nd period default sheet to flex absences sheet column R
+ * Requirements: 4.3, 4.4, 4.5, 4.6
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet
+ * @param {Map<string, Array>} teacherMap - Map of student ID to [teacher email]
+ */
+function addTeacherEmails(flexSheet, teacherMap) {
+  try {
+    const lastRow = flexSheet.getLastRow();
+    
+    if (lastRow <= 2) {
+      Logger.log('No data rows in flex absences sheet to enrich (need at least 3 rows for FlexiSched data)');
+      return;
+    }
+    
+    // Get student IDs from column A (starting from row 3, skipping FlexiSched headers in rows 1-2)
+    const studentIdRange = flexSheet.getRange(3, 1, lastRow - 2, 1);
+    const studentIds = studentIdRange.getValues();
+    
+    // Prepare teacher emails to write to column R
+    const teacherEmails = [];
+    
+    for (let i = 0; i < studentIds.length; i++) {
+      const studentId = String(studentIds[i][0]).trim();
+      
+      if (!studentId || studentId === '') {
+        // Empty row, leave teacher email empty
+        teacherEmails.push(['']);
+        continue;
+      }
+      
+      // Lookup student in teacher map
+      if (teacherMap.has(studentId)) {
+        const data = teacherMap.get(studentId);
+        const teacherEmail = data[1] || '';  // Second element is teacher email
+        teacherEmails.push([teacherEmail]);
+      } else {
+        // Student not found in 2nd period default - leave empty
+        teacherEmails.push(['']);
+      }
+    }
+    
+    // Ensure header is set for column R before writing data
+    const headerR = flexSheet.getRange('R2');
+    if (!headerR.getValue() || headerR.getValue() !== CONFIG.flexAbsencesHeaders.R) {
+      headerR.setValue(CONFIG.flexAbsencesHeaders.R);
+      headerR.setFontWeight('bold');
+      Logger.log('Set header for column R: ' + CONFIG.flexAbsencesHeaders.R);
+    }
+    
+    // Write teacher emails to column R (column 18) starting from row 3
+    const targetRange = flexSheet.getRange(3, 18, teacherEmails.length, 1);
+    targetRange.setValues(teacherEmails);
+    
+    Logger.log(`Added teacher emails to ${teacherEmails.length} rows in flex absences sheet`);
+    
+  } catch (error) {
+    Logger.log(`Error adding teacher emails: ${error.message}`);
+    throw error;
+  }
+}
+
+
 /**
  * Adds contact information (emails) from contact info sheet to flex absences sheet columns O-Q
  * Column mapping: Contact Info N→Flex O, Contact Info G→Flex P, Contact Info K→Flex Q
  * Requirements: 4.3, 4.4, 4.5, 4.6
  * @param {GoogleAppsScript.Spreadsheet.Sheet} flexSheet - The flex absences sheet
  * @param {Map<string, Array>} contactMap - Map of student ID to [student email(N), guardian1 email(G), guardian2 email(K)]
+ * @param {*} flexSheet
+ * @param {*} contactMap
+ * @return {*} 
  */
 function addContactInfo(flexSheet, contactMap) {
   try {
@@ -1251,8 +1318,9 @@ function identifySkippers(flexSheet) {
       return skippers;
     }
     
-    // Get all data from columns A-Q (columns 1-17) starting from row 3 (skipping FlexiSched headers)
-    const dataRange = flexSheet.getRange(3, 1, lastRow - 2, 17);
+    // Get all data from columns A-R (columns 1-18) starting from row 3 (skipping FlexiSched headers)
+    // Include column R so teacher email is part of the copied row data
+    const dataRange = flexSheet.getRange(3, 1, lastRow - 2, 18);
     const data = dataRange.getValues();
     
     // Check each row for #N/A in column M (index 12 in the array)
@@ -1298,34 +1366,36 @@ function copySkippersToMailOut(flexSheet, skipperRows) {
       return;
     }
     
-    // Set correct Mail Out headers (17 columns, not 18)
+    // Set correct Mail Out headers (18 columns)
     const mailOutHeaders = [
       'ID', 'First Name', 'Last Name', 'Grad Year', 'Flex Name', 'Type', 'Request', 
       'Day', 'Period', 'Date', 'Flex Status', 'Comment', 'Brennan Attendance', 
-      '2nd Period Teacher', 'Student Email', 'Guardian 1 Email', 'Guardian 2 Email'
+      '2nd Period Teacher', 'Student Email', 'Guardian 1 Email', 'Guardian 2 Email',
+      '2nd Period Teacher Email'
     ];
     
     // Check if headers need to be set
-    const currentHeaders = mailOutSheet.getRange(1, 1, 1, 17).getValues()[0];
+    const currentHeaders = mailOutSheet.getRange(1, 1, 1, 18).getValues()[0];
     const hasHeaders = currentHeaders.some(header => header !== '');
     
     if (!hasHeaders) {
-      mailOutSheet.getRange(1, 1, 1, 17).setValues([mailOutHeaders]);
-      mailOutSheet.getRange(1, 1, 1, 17).setFontWeight('bold');
+      mailOutSheet.getRange(1, 1, 1, 18).setValues([mailOutHeaders]);
+      mailOutSheet.getRange(1, 1, 1, 18).setFontWeight('bold');
       Logger.log('Set headers in Mail Out sheet');
     }
     
-    // Prepare skipper data for writing - both sheets now have 17 columns
+    // Prepare skipper data for writing - both sheets now have 18 columns
     const skipperData = skipperRows.map(skipper => {
-      const flexRow = skipper.rowData; // 17 columns (A-Q)
+      const flexRow = skipper.rowData; // 18 columns (A-R)
       
       // Direct mapping since both sheets have same structure:
       // A-L: FlexiSched data + Comment
-      // M: Attendance Code → Brennan Attendance  
+      // M: Attendance Code → BHS attendance  
       // N: 2nd Period Teacher
       // O: Student Email
       // P: Guardian 1 Email
       // Q: Guardian 2 Email
+      // R: 2nd Period Teacher Email
       
       return flexRow; // Direct copy since structures match
     });
@@ -1353,11 +1423,11 @@ function ensureEnrichmentHeaders(flexSheet) {
     const lastColumn = flexSheet.getLastColumn();
     Logger.log(`Sheet has ${lastColumn} columns`);
     
-    // Get current headers in row 2, columns M-Q (columns 13-17)
+    // Get current headers in row 2, columns M-R (columns 13-18)
     // We'll read what's there, even if the sheet doesn't have all columns yet
-    const headerRange = flexSheet.getRange(2, 13, 1, 5);
+    const headerRange = flexSheet.getRange(2, 13, 1, 6);
     const currentHeaders = headerRange.getValues()[0];
-    Logger.log('Current headers in M2:Q2:', currentHeaders);
+    Logger.log('Current headers in M2:R2:', currentHeaders);
     
     // Check if any of the enrichment headers are missing or empty
     const expectedHeaders = [
@@ -1365,7 +1435,8 @@ function ensureEnrichmentHeaders(flexSheet) {
       CONFIG.flexAbsencesHeaders.N,  // '2nd Period Teacher'
       CONFIG.flexAbsencesHeaders.O,  // 'Student Email'
       CONFIG.flexAbsencesHeaders.P,  // 'Guardian 1 Email'
-      CONFIG.flexAbsencesHeaders.Q   // 'Guardian 2 Email'
+      CONFIG.flexAbsencesHeaders.Q,   // 'Guardian 2 Email'
+      CONFIG.flexAbsencesHeaders.R,   // '2nd Period Teacher Email'
     ];
     
     let needsUpdate = false;
@@ -1380,7 +1451,7 @@ function ensureEnrichmentHeaders(flexSheet) {
     }
     
     if (needsUpdate) {
-      Logger.log('Restoring missing enrichment headers in row 2, columns M-Q');
+      Logger.log('Restoring missing enrichment headers in row 2, columns M-R');
       Logger.log('Expected headers:', expectedHeaders);
       
       // Set the enrichment headers in row 2
@@ -1490,13 +1561,22 @@ function enrichFlexAbsences() {
     const attendanceIdColumn = getStudentIdColumn(attendanceSheet);
     const attendanceMap = buildStudentMap(attendanceSheet, attendanceIdColumn, [10]);
     
-    // Build teacher map: student ID -> [teacher name from column G]
-    // Column G is index 6 (zero-based)
+    // Build teacher map: student ID -> [teacher name (col G), teacher email (col I)]
+    // Column G is index 6, Column I is index 8 (zero-based)
     const coursesIdColumn = getStudentIdColumn(coursesSheet);
-    const teacherMap = buildStudentMap(coursesSheet, coursesIdColumn, [6]);
+    const teacherMap = buildStudentMap(coursesSheet, coursesIdColumn, [6, 8]);
+
+    // Log some sample teacher data for debugging
+    if (teacherMap.size > 0) {
+      const sampleTeacherEntries = Array.from(teacherMap.entries()).slice(0, 3);
+      Logger.log('Sample teacher map entries:');
+      sampleTeacherEntries.forEach(([id, vals]) => {
+        Logger.log(`  ${id}: [${vals.join(', ')}]`);
+      });
+    }
     
     // Build contact map: student ID -> [student email (N), guardian1 email (G), guardian2 email (K)]
-    // Student ID is in column B (index 1), not A
+    // Student ID is in column B (index 1)
     // Column N is index 13, Column G is index 6, Column K is index 10 (zero-based)
     // Mapping: N→P, G→Q, K→R
     const contactsIdColumn = 1;  // Column B for contact sheet
@@ -1551,6 +1631,9 @@ function enrichFlexAbsences() {
     
     // Add contact info to columns O-Q
     addContactInfo(flexSheet, contactMap);
+
+    // Add teacher emails to column R
+    addTeacherEmails(flexSheet, teacherMap);
     
     Logger.log('Enrichment complete. Identifying skippers...');
     
