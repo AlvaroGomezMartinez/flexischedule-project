@@ -1,0 +1,23 @@
+# clasp (Google Apps Script CLI) authentication
+.clasprc.json
+
+# Node modules (if using npm packages)
+node_modules/
+
+# macOS
+.DS_Store
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
